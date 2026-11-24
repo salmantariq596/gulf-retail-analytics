@@ -6,3 +6,4 @@ tiktok,TikTok,paid_social,true
 snapchat,Snapchat,paid_social,true
 email,Email (CRM),owned,true
 affiliate,Affiliates,affiliate,true
+unknown,Unknown (anonymous),unknown,false

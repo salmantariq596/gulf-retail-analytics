@@ -43,6 +43,8 @@ final as (
         coalesce(customers.customer_key, '-1') as customer_key,
         channels.channel_key,
 
+        returns.customer_id,
+        coalesce(customers.acquisition_channel, 'unknown') as acquisition_channel,
         returns.return_date,
         returns.returned_at,
         returns.original_sale_date,

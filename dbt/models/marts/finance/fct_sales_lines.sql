@@ -59,6 +59,9 @@ final as (
         coalesce(promotions.promotion_key, '-1') as promotion_key,
 
         -- degenerate attributes
+        sales.customer_id,
+        -- first-touch channel of the customer: joins revenue to marketing spend for ROAS
+        coalesce(customers.acquisition_channel, 'unknown') as acquisition_channel,
         sales.business_date,
         sales.sold_at,
         sales.sold_at_local,

@@ -1,0 +1,179 @@
+version: 2
+
+# MetricFlow semantic models: how each mart table maps to entities (join keys),
+# dimensions (group-by) and measures (aggregations). Metrics are in _metrics.yml.
+
+semantic_models:
+  # ---------------------------------------------------------------- facts
+  - name: sales_lines
+    description: One product line on one completed sale (POS or online).
+    model: ref('fct_sales_lines')
+    defaults: {agg_time_dimension: business_date}
+    entities:
+      - {name: sales_line, type: primary, expr: sales_line_key}
+      - {name: store, type: foreign, expr: store_key}
+      - {name: product, type: foreign, expr: product_key}
+      - {name: customer, type: foreign, expr: customer_key}
+      - {name: channel, type: foreign, expr: channel_key}
+      - {name: promotion, type: foreign, expr: promotion_key}
+      - {name: marketing_channel, type: foreign, expr: acquisition_channel}
+      - {name: country, type: foreign, expr: country_code}
+    dimensions:
+      - {name: business_date, type: time, type_params: {time_granularity: day}}
+      - {name: source_system, type: categorical}
+    measures:
+      - {name: gross_sales, agg: sum, expr: gross_excl_vat_aed, description: "Before discounts, excl. VAT, AED"}
+      - {name: discounts, agg: sum, expr: discount_excl_vat_aed}
+      - {name: sales_net_of_discounts, agg: sum, expr: net_excl_vat_aed}
+      - {name: cogs, agg: sum, expr: cogs_aed}
+      - {name: vat_on_sales, agg: sum, expr: vat_aed}
+      - {name: units_sold, agg: sum, expr: quantity}
+      - {name: transactions, agg: count_distinct, expr: "source_system || '-' || transaction_id"}
+      - name: purchasing_customers
+        description: Distinct identified customers (anonymous walk-ins and guests excluded).
+        agg: count_distinct
+        expr: "case when customer_key != '-1' then customer_id end"
+
+  - name: returns
+    description: One returned line, booked on the return date.
+    model: ref('fct_returns')
+    defaults: {agg_time_dimension: return_date}
+    entities:
+      - {name: return_line, type: primary, expr: return_line_key}
+      - {name: store, type: foreign, expr: store_key}
+      - {name: product, type: foreign, expr: product_key}
+      - {name: customer, type: foreign, expr: customer_key}
+      - {name: channel, type: foreign, expr: channel_key}
+      - {name: marketing_channel, type: foreign, expr: acquisition_channel}
+      - {name: country, type: foreign, expr: country_code}
+    dimensions:
+      - {name: return_date, type: time, type_params: {time_granularity: day}}
+      - {name: reason_code, type: categorical}
+      - {name: match_method, type: categorical}
+    measures:
+      - {name: returns_value, agg: sum, expr: refund_excl_vat_aed}
+      - {name: returned_cogs, agg: sum, expr: returned_cogs_aed}
+      - {name: vat_on_returns, agg: sum, expr: refund_vat_aed}
+      - {name: units_returned, agg: sum, expr: quantity}
+
+  - name: inventory_daily
+    description: End-of-day stock per store and product. Semi-additive over time.
+    model: ref('fct_inventory_daily')
+    defaults: {agg_time_dimension: snapshot_date}
+    entities:
+      - {name: inventory_row, type: primary, expr: inventory_key}
+      - {name: store, type: foreign, expr: store_key}
+      - {name: product, type: foreign, expr: product_key}
+    dimensions:
+      - {name: snapshot_date, type: time, type_params: {time_granularity: day}}
+    measures:
+      # Stock is a level, not a flow: summing across days is meaningless. The
+      # non-additive dimension makes MetricFlow take the LAST day in each period.
+      - name: closing_stock_units
+        agg: sum
+        expr: qty_on_hand
+        non_additive_dimension: {name: snapshot_date, window_choice: max}
+      - name: closing_stock_value
+        agg: sum
+        expr: stock_value_at_cost_aed
+        non_additive_dimension: {name: snapshot_date, window_choice: max}
+
+  - name: online_orders
+    description: One online order (accumulating snapshot).
+    model: ref('fct_online_orders')
+    defaults: {agg_time_dimension: placed_date}
+    entities:
+      - {name: online_order, type: primary, expr: order_key}
+      - {name: customer, type: foreign, expr: customer_key}
+      - {name: channel, type: foreign, expr: channel_key}
+      - {name: store, type: foreign, expr: store_key}
+    dimensions:
+      - {name: placed_date, type: time, type_params: {time_granularity: day}}
+      - {name: current_status, type: categorical}
+      - {name: payment_method, type: categorical}
+      - {name: is_cancelled, type: categorical}
+    measures:
+      - {name: orders_placed, agg: count, expr: order_key}
+      - {name: delivered_orders, agg: sum, expr: "case when is_delivered then 1 else 0 end"}
+      - {name: delivery_hours, agg: average, expr: hours_placed_to_delivered}
+
+  - name: marketing_spend
+    description: Daily spend per campaign and country.
+    model: ref('fct_marketing_spend')
+    defaults: {agg_time_dimension: spend_date}
+    entities:
+      - {name: marketing_spend_row, type: primary, expr: marketing_spend_key}
+      - {name: campaign, type: foreign, expr: campaign_key}
+      - {name: marketing_channel, type: foreign, expr: marketing_channel}
+      - {name: country, type: foreign, expr: country_code}
+    dimensions:
+      - {name: spend_date, type: time, type_params: {time_granularity: day}}
+    measures:
+      - {name: spend, agg: sum, expr: spend_aed}
+      - {name: clicks, agg: sum, expr: clicks}
+      - {name: impressions, agg: sum, expr: impressions}
+
+  # ----------------------------------------------------------- dimensions
+  - name: stores
+    model: ref('dim_store')
+    entities: [{name: store, type: primary, expr: store_key}]
+    dimensions:
+      - {name: store_code, type: categorical}
+      - {name: store_name_en, type: categorical}
+      - {name: city, type: categorical}
+      - {name: store_format, type: categorical}
+      - {name: is_online_store, type: categorical}
+
+  - name: products
+    model: ref('dim_product')
+    entities: [{name: product, type: primary, expr: product_key}]
+    dimensions:
+      - {name: sku, type: categorical}
+      - {name: category, type: categorical}
+      - {name: subcategory, type: categorical}
+      - {name: brand, type: categorical}
+      - {name: price_band, type: categorical}
+
+  - name: customers
+    model: ref('dim_customer')
+    entities: [{name: customer, type: primary, expr: customer_key}]
+    dimensions:
+      - {name: customer_type, type: categorical}
+      - {name: loyalty_tier, type: categorical}
+      - {name: is_loyalty_member, type: categorical}
+
+  - name: channels
+    model: ref('dim_channel')
+    entities: [{name: channel, type: primary, expr: channel_key}]
+    dimensions:
+      - {name: channel_code, type: categorical}
+      - {name: channel_group, type: categorical}
+
+  - name: promotions
+    model: ref('dim_promotion')
+    entities: [{name: promotion, type: primary, expr: promotion_key}]
+    dimensions:
+      - {name: promotion_code, type: categorical}
+      - {name: discount_type, type: categorical}
+
+  - name: campaigns
+    model: ref('dim_campaign')
+    entities: [{name: campaign, type: primary, expr: campaign_key}]
+    dimensions:
+      - {name: campaign_name, type: categorical}
+      - {name: is_always_on, type: categorical}
+
+  - name: marketing_channels
+    description: Shared by revenue (customer acquisition channel) and spend, so ROAS can divide one by the other.
+    model: ref('marketing_channels')
+    entities: [{name: marketing_channel, type: primary, expr: marketing_channel}]
+    dimensions:
+      - {name: channel_name, type: categorical}
+      - {name: channel_type, type: categorical}
+      - {name: is_paid, type: categorical}
+
+  - name: countries
+    model: ref('countries')
+    entities: [{name: country, type: primary, expr: country_code}]
+    dimensions:
+      - {name: country_name_en, type: categorical}
