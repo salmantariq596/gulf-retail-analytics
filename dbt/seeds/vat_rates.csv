@@ -1,0 +1,5 @@
+country_code,vat_rate,valid_from,valid_to,note
+AE,0.05,2018-01-01,9999-12-31,VAT introduced 2018-01-01
+SA,0.05,2018-01-01,2020-06-30,VAT introduced 2018-01-01
+SA,0.15,2020-07-01,9999-12-31,Raised from 5% to 15% on 2020-07-01
+QA,0.00,2000-01-01,9999-12-31,No VAT in Qatar

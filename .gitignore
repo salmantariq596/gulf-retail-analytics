@@ -1,0 +1,38 @@
+# Python
+.venv/
+*.egg-info/
+build/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Secrets / local config (Snowflake keys live in ~/.snowflake/keys, never in the repo)
+.env
+*.p8
+*.pem
+
+# Personal / account-specific files kept out of the public repo
+docs/*.docx
+docs/Untitled*.csv
+*.worksheet.csv
+
+# Generated data & local warehouses
+data/
+*.duckdb
+*.duckdb.wal
+.dlt/secrets.toml
+
+# dbt
+dbt/target/
+dbt/dbt_packages/
+dbt/logs/
+logs/
+
+# Dagster
+orchestration/.dagster_home/
+
+# OS / editors
+.DS_Store
+Thumbs.db
+.vscode/
+~$*.docx

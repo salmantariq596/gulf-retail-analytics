@@ -1,0 +1,33 @@
+# Phases 0–5: generator, mock API, ingestion, dbt on DuckDB.
+# MetricFlow, Dagster and Lightdash deps are added in Phase 6.
+
+# Data generator + mock API
+faker>=40
+numpy>=2.0
+pandas>=2.2
+fastapi>=0.116
+uvicorn[standard]>=0.30
+psycopg[binary]>=3.2
+sqlalchemy>=2.0
+python-dotenv>=1.0
+hijridate>=2.5          # Umm al-Qura Hijri calendar for the dim_date seed
+
+# Ingestion
+dlt[duckdb,postgres,sql_database]>=1.30
+pyarrow>=17
+requests>=2.32
+
+# Transformation (dbt Core 1.11 matches the Analytics Engineering certification)
+dbt-core~=1.11.0
+dbt-duckdb~=1.11.0
+dbt-snowflake~=1.11.0   # Phase 5: production warehouse
+
+# Phase 5: dlt -> Snowflake (key-pair auth)
+dlt[snowflake]>=1.30
+cryptography>=42
+
+# Quality
+sqlfluff>=3.0
+sqlfluff-templater-dbt>=3.0
+pre-commit>=3.7
+pytest>=8.0

@@ -1,0 +1,258 @@
+version: 2
+
+models:
+  - name: stg_pos__stores
+    description: One row per store (physical and virtual online), current state.
+    data_tests:
+      - dbt_expectations.expect_column_pair_values_A_to_be_greater_than_B:
+          arguments:
+            column_A: closed_on
+            column_B: opened_on
+            row_condition: "closed_on is not null"
+    columns:
+      - name: store_id
+        data_tests: [unique, not_null]
+      - name: store_code
+        data_tests: [unique, not_null]
+      - name: country_code
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ["AE", "SA", "QA"]
+      - name: store_format
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ["flagship", "mall", "express", "online"]
+      - name: currency_code
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('currency_rates')
+                field: currency_code
+      - name: closed_on
+        description: Null while the store trades; set on the day it closes.
+
+  - name: stg_pos__cashiers
+    description: One row per till login. Training logins (TRN-*) ring up test sales.
+    columns:
+      - name: cashier_id
+        data_tests: [unique, not_null]
+      - name: store_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_pos__stores')
+                field: store_id
+      - name: is_training_cashier
+        data_tests: [not_null]
+
+  - name: stg_pos__customers
+    description: One row per loyalty member (current state; history comes from snap_customers).
+    columns:
+      - name: pos_customer_id
+        data_tests: [unique, not_null]
+      - name: loyalty_number
+        data_tests: [unique, not_null]
+      - name: loyalty_tier
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ["blue", "silver", "gold", "platinum"]
+      - name: acquisition_channel
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('marketing_channels')
+                field: marketing_channel
+      - name: home_store_id
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('stg_pos__stores')
+                field: store_id
+      - name: created_at
+        data_tests: [not_null]
+
+  - name: stg_pos__promotions
+    columns:
+      - name: promotion_id
+        data_tests: [unique, not_null]
+      - name: promotion_code
+        data_tests: [unique, not_null]
+      - name: discount_type
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ["percent", "amount"]
+      - name: discount_value
+        data_tests:
+          - dbt_expectations.expect_column_values_to_be_between:
+              arguments:
+                min_value: 0
+                max_value: 100
+                strictly: true
+
+  - name: stg_pos__sales
+    description: One row per till transaction, including voided and training-mode sales.
+    columns:
+      - name: sale_id
+        data_tests: [unique, not_null]
+      - name: store_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_pos__stores')
+                field: store_id
+      - name: cashier_id
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('stg_pos__cashiers')
+                field: cashier_id
+      - name: pos_customer_id
+        description: Null for anonymous walk-in customers (~55% of sales).
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('stg_pos__customers')
+                field: pos_customer_id
+      - name: currency_code
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ["AED", "SAR", "QAR"]
+      - name: sale_status
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ["completed", "voided"]
+      - name: total_incl_vat
+        data_tests:
+          - dbt_expectations.expect_column_values_to_be_between:
+              arguments:
+                min_value: 0
+      - name: sold_at
+        data_tests: [not_null]
+
+  - name: stg_pos__sale_lines
+    description: >
+      One row per line as received from the till, including duplicates re-sent after a till
+      restart (same sale_id + line_number, new sale_line_id, ~0.5% of lines).
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [sale_id, line_number]
+          config:
+            severity: warn  # expected: duplicates are a known source problem, removed in int_pos_sale_lines_deduped
+    columns:
+      - name: sale_line_id
+        data_tests: [unique, not_null]
+      - name: sale_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_pos__sales')
+                field: sale_id
+      - name: sku
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_catalog__products')
+                field: sku
+      - name: quantity
+        data_tests:
+          - dbt_expectations.expect_column_values_to_be_between:
+              arguments:
+                min_value: 1
+                max_value: 50
+      - name: promotion_id
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('stg_pos__promotions')
+                field: promotion_id
+      - name: line_total_incl_vat
+        description: quantity x unit price - discount, VAT-inclusive, local currency.
+        data_tests:
+          - dbt_expectations.expect_column_values_to_be_between:
+              arguments:
+                min_value: 0
+
+  - name: stg_pos__payments
+    columns:
+      - name: payment_id
+        data_tests: [unique, not_null]
+      - name: sale_id
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('stg_pos__sales')
+                field: sale_id
+      - name: payment_method
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ["card", "cash", "apple_pay", "tabby", "tamara", "gift_card"]
+
+  - name: stg_pos__returns
+    description: One row per return receipt.
+    columns:
+      - name: return_id
+        data_tests: [unique, not_null]
+      - name: store_id
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('stg_pos__stores')
+                field: store_id
+      - name: original_sale_id
+        description: Null when the customer has no receipt or returns an online order in store.
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('stg_pos__sales')
+                field: sale_id
+      - name: original_online_order_id
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('stg_online__orders')
+                field: order_id
+      - name: reason_code
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ["defective", "changed_mind", "wrong_item", "other"]
+
+  - name: stg_pos__return_lines
+    columns:
+      - name: return_line_id
+        data_tests: [unique, not_null]
+      - name: return_id
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('stg_pos__returns')
+                field: return_id
+      - name: original_sale_line_id
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('stg_pos__sale_lines')
+                field: sale_line_id
+      - name: quantity
+        data_tests:
+          - dbt_expectations.expect_column_values_to_be_between:
+              arguments:
+                min_value: 1
+      - name: refund_incl_vat
+        data_tests:
+          - dbt_expectations.expect_column_values_to_be_between:
+              arguments:
+                min_value: 0

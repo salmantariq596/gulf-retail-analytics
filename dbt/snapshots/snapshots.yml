@@ -1,0 +1,30 @@
+version: 2
+
+# SCD Type 2 for sources that overwrite rows in place (PostgreSQL POS). If a change
+# is not captured when it happens, it is gone: history starts when snapshotting starts.
+#
+# Strategy choice:
+#   - timestamp: the source has a trustworthy updated_at that changes on every edit
+#     (both tables below). Cheap: compares one column.
+#   - check: no reliable updated_at, so compare the listed columns. The product catalog
+#     is the textbook case, but its raw layer keeps every daily export, so product
+#     versions are derived from the export history instead (int_products_versioned).
+
+snapshots:
+  - name: snap_stores
+    description: Store history (format, closure date, names).
+    relation: ref('stg_pos__stores')
+    config:
+      unique_key: store_id
+      strategy: timestamp
+      updated_at: updated_at
+      dbt_valid_to_current: "cast('9999-12-31' as timestamp)"
+
+  - name: snap_customers
+    description: Loyalty member history (tier upgrades/downgrades, home store, contact details).
+    relation: ref('stg_pos__customers')
+    config:
+      unique_key: pos_customer_id
+      strategy: timestamp
+      updated_at: updated_at
+      dbt_valid_to_current: "cast('9999-12-31' as timestamp)"

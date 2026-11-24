@@ -1,0 +1,116 @@
+version: 2
+
+models:
+  - name: stg_online__customers
+    description: One row per online account.
+    columns:
+      - name: online_customer_id
+        data_tests: [unique, not_null]
+      - name: loyalty_number
+        description: Links the account to the POS loyalty master; null for online-only customers.
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('stg_pos__customers')
+                field: loyalty_number
+      - name: acquisition_channel
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('marketing_channels')
+                field: marketing_channel
+
+  - name: stg_online__orders
+    description: One row per order, current state.
+    columns:
+      - name: order_id
+        data_tests: [unique, not_null]
+      - name: order_record_id
+        data_tests: [unique, not_null]
+      - name: online_customer_id
+        description: Null for guest checkouts.
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('stg_online__customers')
+                field: online_customer_id
+      - name: sales_channel
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ["web", "app"]
+      - name: ship_country_code
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ["AE", "SA", "QA"]
+      - name: payment_method
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ["card", "apple_pay", "cod"]
+      - name: order_status
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ["placed", "paid", "shipped", "delivered", "cancelled"]
+      - name: promotion_code
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('stg_pos__promotions')
+                field: promotion_code
+
+  - name: stg_online__order_lines
+    description: One row per order line; carries the parent order's dlt row id, not order_id.
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [order_record_id, line_number]
+    columns:
+      - name: order_line_record_id
+        data_tests: [unique, not_null]
+      - name: order_record_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_online__orders')
+                field: order_record_id
+      - name: sku
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('stg_catalog__products')
+                field: sku
+      - name: quantity
+        data_tests:
+          - dbt_expectations.expect_column_values_to_be_between:
+              arguments:
+                min_value: 1
+                max_value: 50
+
+  - name: stg_online__order_events
+    description: One row per order status change.
+    data_tests:
+      - dbt_expectations.expect_column_pair_values_A_to_be_greater_than_B:
+          arguments:
+            column_A: published_at
+            column_B: event_at
+            or_equal: true
+    columns:
+      - name: event_id
+        data_tests: [unique, not_null]
+      - name: order_id
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('stg_online__orders')
+                field: order_id
+      - name: event_status
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ["placed", "paid", "shipped", "delivered", "cancelled"]
+      - name: published_at
+        description: When the event appeared in the API; later than event_at for late-arriving orders.

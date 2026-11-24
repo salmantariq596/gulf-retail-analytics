@@ -1,0 +1,5 @@
+currency_code,currency_name,aed_per_unit,units_per_usd,valid_from,valid_to
+AED,UAE Dirham,1.00000000,3.6725,2000-01-01,9999-12-31
+SAR,Saudi Riyal,0.97933333,3.75,2000-01-01,9999-12-31
+QAR,Qatari Riyal,1.00892857,3.64,2000-01-01,9999-12-31
+USD,US Dollar,3.67250000,1.00,2000-01-01,9999-12-31

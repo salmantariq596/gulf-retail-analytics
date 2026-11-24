@@ -1,0 +1,181 @@
+version: 2
+
+# dbt unit tests: fixed inputs, hand-calculated expected outputs. They test the
+# logic itself, independent of the data in the warehouse.
+
+unit_tests:
+  - name: test_sales_vat_split_currency_and_cost_on_sale_date
+    description: >
+      VAT is split out of VAT-inclusive prices at the country's rate; amounts convert to AED at
+      the peg cross rate; the business date is the LOCAL date (a UAE sale at 21:30 UTC belongs to
+      the next day); the product cost is the version valid on the business date.
+    model: int_sales_lines_enriched
+    given:
+      - input: ref('int_sales_lines_unioned')
+        rows:
+          # Saudi sale: 115 SAR incl. 15% VAT -> 100 SAR net -> 97.93 AED; after the cost change
+          - {source_system: pos, transaction_id: "1", line_number: 1, source_line_id: "11", store_id: 12,
+             country_code: SA, sales_channel: store, pos_customer_id: 7, online_customer_id: null, sku: X1,
+             promotion_code: null, currency_code: SAR, sold_at: "2026-11-20 10:00:00", quantity: 1,
+             unit_price_incl_vat: 115.00, discount_incl_vat: 0.00, line_total_incl_vat: 115.00}
+          # UAE sale late in the UTC evening: 2 x 52.50 AED with 10.50 discount, all incl. 5% VAT
+          - {source_system: pos, transaction_id: "2", line_number: 1, source_line_id: "21", store_id: 1,
+             country_code: AE, sales_channel: store, pos_customer_id: null, online_customer_id: null, sku: X1,
+             promotion_code: null, currency_code: AED, sold_at: "2026-11-20 21:30:00", quantity: 2,
+             unit_price_incl_vat: 52.50, discount_incl_vat: 10.50, line_total_incl_vat: 94.50}
+          # Qatar online sale before the cost change: no VAT, QAR -> AED
+          - {source_system: online, transaction_id: WEB-1, line_number: 1, source_line_id: abc, store_id: 28,
+             country_code: QA, sales_channel: web, pos_customer_id: null, online_customer_id: c_1, sku: X1,
+             promotion_code: null, currency_code: QAR, sold_at: "2026-11-10 12:00:00", quantity: 1,
+             unit_price_incl_vat: 100.00, discount_incl_vat: 0.00, line_total_incl_vat: 100.00}
+      - input: ref('countries')
+        rows:
+          - {country_code: AE, utc_offset_hours: 4}
+          - {country_code: SA, utc_offset_hours: 3}
+          - {country_code: QA, utc_offset_hours: 3}
+      - input: ref('vat_rates')
+        rows:
+          - {country_code: AE, vat_rate: 0.05, valid_from: "2018-01-01", valid_to: "9999-12-31"}
+          - {country_code: SA, vat_rate: 0.15, valid_from: "2020-07-01", valid_to: "9999-12-31"}
+          - {country_code: QA, vat_rate: 0.00, valid_from: "2000-01-01", valid_to: "9999-12-31"}
+      - input: ref('currency_rates')
+        rows:
+          - {currency_code: AED, aed_per_unit: 1.0, valid_from: "2000-01-01", valid_to: "9999-12-31"}
+          - {currency_code: SAR, aed_per_unit: 0.97933333, valid_from: "2000-01-01", valid_to: "9999-12-31"}
+          - {currency_code: QAR, aed_per_unit: 1.00892857, valid_from: "2000-01-01", valid_to: "9999-12-31"}
+      - input: ref('int_customer_identity_map')
+        rows:
+          - {source_system: pos, source_customer_id: "7", customer_id: L-NJSA00000007}
+          - {source_system: online, source_customer_id: c_1, customer_id: O-c_1}
+      - input: ref('int_products_versioned')
+        rows:
+          - {sku: X1, unit_cost_aed: 60.00, valid_from: "1900-01-01 00:00:00", valid_to: "2026-11-15 00:00:00"}
+          - {sku: X1, unit_cost_aed: 70.00, valid_from: "2026-11-15 00:00:00", valid_to: "9999-12-31 00:00:00"}
+    expect:
+      rows:
+        - {sales_line_id: pos-1-1, business_date: "2026-11-20", customer_id: L-NJSA00000007,
+           net_excl_vat_local: 100.00, vat_local: 15.00, net_excl_vat_aed: 97.93, net_incl_vat_aed: 112.62,
+           vat_aed: 14.69, unit_cost_aed: 70.00, gross_margin_aed: 27.93}
+        - {sales_line_id: pos-2-1, business_date: "2026-11-21", customer_id: null,
+           net_excl_vat_local: 90.00, vat_local: 4.50, net_excl_vat_aed: 90.00, net_incl_vat_aed: 94.50,
+           vat_aed: 4.50, unit_cost_aed: 70.00, gross_margin_aed: -50.00}
+        - {sales_line_id: online-WEB-1-1, business_date: "2026-11-10", customer_id: O-c_1,
+           net_excl_vat_local: 100.00, vat_local: 0.00, net_excl_vat_aed: 100.89, net_incl_vat_aed: 100.89,
+           vat_aed: 0.00, unit_cost_aed: 60.00, gross_margin_aed: 40.89}
+
+  - name: test_return_matching
+    description: >
+      A receipt return links to the exact till line; an online order returned in store links to the
+      first order line with the same SKU; a no-receipt return stays unmatched and is costed at the
+      product cost valid on the return date.
+    model: int_returns_matched
+    given:
+      - input: ref('stg_pos__return_lines')
+        rows:
+          - {return_line_id: 1, return_id: 100, original_sale_line_id: 501, sku: P1, quantity: 1, refund_incl_vat: 105.00}
+          - {return_line_id: 2, return_id: 200, original_sale_line_id: null, sku: Y, quantity: 1, refund_incl_vat: 52.50}
+          - {return_line_id: 3, return_id: 300, original_sale_line_id: null, sku: P1, quantity: 2, refund_incl_vat: 105.00}
+      - input: ref('stg_pos__returns')
+        rows:
+          - {return_id: 100, store_id: 1, pos_customer_id: null, original_online_order_id: null, currency_code: AED,
+             reason_code: defective, returned_at: "2026-11-20 08:00:00"}
+          - {return_id: 200, store_id: 1, pos_customer_id: null, original_online_order_id: WEB-9, currency_code: AED,
+             reason_code: changed_mind, returned_at: "2026-11-20 09:00:00"}
+          - {return_id: 300, store_id: 1, pos_customer_id: null, original_online_order_id: null, currency_code: AED,
+             reason_code: other, returned_at: "2026-11-20 10:00:00"}
+      - input: ref('stg_pos__stores')
+        rows:
+          - {store_id: 1, country_code: AE}
+      - input: ref('countries')
+        rows:
+          - {country_code: AE, utc_offset_hours: 4}
+      - input: ref('vat_rates')
+        rows:
+          - {country_code: AE, vat_rate: 0.05, valid_from: "2018-01-01", valid_to: "9999-12-31"}
+      - input: ref('currency_rates')
+        rows:
+          - {currency_code: AED, aed_per_unit: 1.0, valid_from: "2000-01-01", valid_to: "9999-12-31"}
+      - input: ref('int_pos_sale_lines_deduped')
+        rows:
+          - {sale_line_id: 501, sale_id: 50, line_number: 2}
+      - input: ref('int_online_order_lines_valid')
+        rows:
+          - {transaction_id: WEB-9, line_number: 1, sku: Z}
+          - {transaction_id: WEB-9, line_number: 2, sku: Y}
+          - {transaction_id: WEB-9, line_number: 3, sku: Y}
+      - input: ref('int_sales_lines_enriched')
+        rows:
+          - {sales_line_id: pos-50-2, sales_channel: store, business_date: "2026-11-01", customer_id: L-A, unit_cost_aed: 40.00}
+          - {sales_line_id: online-WEB-9-2, sales_channel: web, business_date: "2026-11-05", customer_id: O-B, unit_cost_aed: 30.00}
+      - input: ref('int_customer_identity_map')
+        rows: []
+      - input: ref('int_products_versioned')
+        rows:
+          - {sku: P1, unit_cost_aed: 33.00, valid_from: "1900-01-01 00:00:00", valid_to: "9999-12-31 00:00:00"}
+          - {sku: Y, unit_cost_aed: 31.00, valid_from: "1900-01-01 00:00:00", valid_to: "9999-12-31 00:00:00"}
+    expect:
+      rows:
+        - {return_line_id: 1, match_method: receipt, original_sales_line_id: pos-50-2, sales_channel: store,
+           customer_id: L-A, refund_excl_vat_local: 100.00, unit_cost_aed: 40.00, returned_cogs_aed: 40.00}
+        - {return_line_id: 2, match_method: online_order, original_sales_line_id: online-WEB-9-2, sales_channel: web,
+           customer_id: O-B, refund_excl_vat_local: 50.00, unit_cost_aed: 30.00, returned_cogs_aed: 30.00}
+        - {return_line_id: 3, match_method: unmatched, original_sales_line_id: null, sales_channel: store,
+           customer_id: null, refund_excl_vat_local: 100.00, unit_cost_aed: 33.00, returned_cogs_aed: 66.00}
+
+  - name: test_order_milestone_lags
+    description: >
+      Lags come from events, not from the status: a cash-on-delivery order is paid after delivery,
+      and a cancelled order never ships.
+    model: int_online_order_milestones
+    given:
+      - input: ref('stg_online__order_events')
+        rows:
+          # prepaid: paid 15 min after placing, shipped after 24h, delivered 48h later
+          - {event_id: 1, order_id: A, event_status: placed, event_at: "2026-11-01 10:00:00", published_at: "2026-11-01 10:00:00"}
+          - {event_id: 2, order_id: A, event_status: paid, event_at: "2026-11-01 10:15:00", published_at: "2026-11-01 10:15:00"}
+          - {event_id: 3, order_id: A, event_status: shipped, event_at: "2026-11-02 10:00:00", published_at: "2026-11-02 10:00:00"}
+          - {event_id: 4, order_id: A, event_status: delivered, event_at: "2026-11-04 10:00:00", published_at: "2026-11-04 10:00:00"}
+          # cash on delivery: paid 30 min after delivery
+          - {event_id: 5, order_id: B, event_status: placed, event_at: "2026-11-01 00:00:00", published_at: "2026-11-01 00:00:00"}
+          - {event_id: 6, order_id: B, event_status: shipped, event_at: "2026-11-01 20:00:00", published_at: "2026-11-01 20:00:00"}
+          - {event_id: 7, order_id: B, event_status: delivered, event_at: "2026-11-03 02:00:00", published_at: "2026-11-03 02:00:00"}
+          - {event_id: 8, order_id: B, event_status: paid, event_at: "2026-11-03 02:30:00", published_at: "2026-11-03 02:30:00"}
+          # cancelled after payment, before shipping
+          - {event_id: 9, order_id: C, event_status: placed, event_at: "2026-11-01 12:00:00", published_at: "2026-11-01 12:00:00"}
+          - {event_id: 10, order_id: C, event_status: paid, event_at: "2026-11-01 12:06:00", published_at: "2026-11-01 12:06:00"}
+          - {event_id: 11, order_id: C, event_status: cancelled, event_at: "2026-11-02 08:00:00", published_at: "2026-11-02 08:00:00"}
+    expect:
+      rows:
+        - {order_id: A, hours_placed_to_paid: 0.25, hours_placed_to_shipped: 24.00, hours_shipped_to_delivered: 48.00,
+           hours_placed_to_delivered: 72.00, cancelled_at: null}
+        - {order_id: B, hours_placed_to_paid: 50.50, hours_placed_to_shipped: 20.00, hours_shipped_to_delivered: 30.00,
+           hours_placed_to_delivered: 50.00, cancelled_at: null}
+        - {order_id: C, hours_placed_to_paid: 0.10, hours_placed_to_shipped: null, hours_shipped_to_delivered: null,
+           hours_placed_to_delivered: null, cancelled_at: "2026-11-02 08:00:00"}
+
+  - name: test_inventory_missing_day_and_negative_stock
+    description: >
+      A missing daily file carries the last known stock forward (flagged as imputed); negative
+      stock from an ERP sync error is floored at zero and flagged.
+    model: int_inventory_daily_filled
+    given:
+      - input: ref('stg_erp__stock_on_hand')
+        rows:
+          - {snapshot_date: "2026-11-01", store_code: AE-DXB-01, sku: P1, qty_on_hand: 5, qty_on_order: 0}
+          # 2026-11-02: file missing
+          - {snapshot_date: "2026-11-03", store_code: AE-DXB-01, sku: P1, qty_on_hand: 3, qty_on_order: 10}
+          - {snapshot_date: "2026-11-04", store_code: AE-DXB-01, sku: P1, qty_on_hand: -2, qty_on_order: 10}
+      - input: ref('dim_date')
+        rows:
+          - {date_day: "2026-10-31"}
+          - {date_day: "2026-11-01"}
+          - {date_day: "2026-11-02"}
+          - {date_day: "2026-11-03"}
+          - {date_day: "2026-11-04"}
+          - {date_day: "2026-11-05"}
+    expect:
+      rows:
+        - {snapshot_date: "2026-11-01", qty_on_hand: 5, qty_on_order: 0, is_imputed: false, is_negative_reported: false}
+        - {snapshot_date: "2026-11-02", qty_on_hand: 5, qty_on_order: 0, is_imputed: true, is_negative_reported: false}
+        - {snapshot_date: "2026-11-03", qty_on_hand: 3, qty_on_order: 10, is_imputed: false, is_negative_reported: false}
+        - {snapshot_date: "2026-11-04", qty_on_hand: 0, qty_on_order: 10, is_imputed: false, is_negative_reported: true}

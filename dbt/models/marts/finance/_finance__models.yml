@@ -1,0 +1,123 @@
+version: 2
+
+models:
+  - name: fct_sales_lines
+    description: >
+      Transaction fact. Grain: one product line on one completed sale, POS or online.
+      Incremental (delete+insert by business_date, 3-day lookback): see the incremental_lookback macro.
+      Excludes voided, training-mode and test-SKU lines, and cancelled online orders.
+    data_tests:
+      # Statistical drift monitors: WARN, not error. A promotion or a seasonal peak can
+      # legitimately move these; a warning tells someone to look, it does not block the load.
+      - dbt_expectations.expect_column_mean_to_be_between:
+          arguments: {column_name: quantity, min_value: 1.0, max_value: 2.0}
+          config: {severity: warn}
+      - dbt_expectations.expect_column_mean_to_be_between:
+          arguments: {column_name: net_excl_vat_aed, min_value: 100, max_value: 1500}
+          config: {severity: warn}
+      - dbt_expectations.expect_row_values_to_have_recent_data:
+          arguments: {column_name: business_date, datepart: day, interval: 3}
+          config: {severity: warn}  # stale data is an ops alert; source freshness is the hard gate
+    columns:
+      - name: sales_line_key
+        data_tests: [unique, not_null]
+      - name: sales_line_id
+        data_tests: [unique, not_null]
+      - name: source_system
+        data_tests:
+          - accepted_values:
+              arguments: {values: ["pos", "online"]}
+      - name: date_key
+        data_tests:
+          - not_null
+          - relationships:
+              arguments: {to: ref('dim_date'), field: date_key}
+      - name: store_key
+        data_tests:
+          - not_null
+          - relationships:
+              arguments: {to: ref('dim_store'), field: store_key}
+      - name: product_key
+        description: The product version valid on the business date.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments: {to: ref('dim_product'), field: product_key}
+      - name: customer_key
+        description: "'-1' for anonymous walk-in and guest sales."
+        data_tests:
+          - not_null
+          - relationships:
+              arguments: {to: ref('dim_customer'), field: customer_key}
+      - name: channel_key
+        data_tests:
+          - not_null
+          - relationships:
+              arguments: {to: ref('dim_channel'), field: channel_key}
+      - name: promotion_key
+        data_tests:
+          - not_null
+          - relationships:
+              arguments: {to: ref('dim_promotion'), field: promotion_key}
+      - name: quantity
+        data_tests:
+          - dbt_expectations.expect_column_values_to_be_between:
+              arguments: {min_value: 1}
+      - name: net_excl_vat_aed
+        description: Gross sales minus discounts, excluding VAT, in AED (before returns).
+        data_tests:
+          - not_null
+          - dbt_expectations.expect_column_values_to_be_between:
+              arguments: {min_value: 0}
+      - name: unit_cost_aed
+        data_tests: [not_null]
+
+  - name: fct_returns
+    description: >
+      Transaction fact. Grain: one returned line on one return receipt, booked on the return date
+      in the store where the item came back.
+    data_tests:
+      - dbt_expectations.expect_column_values_to_be_in_set:
+          arguments: {column_name: match_method, value_set: ["receipt", "online_order", "unmatched"]}
+    columns:
+      - name: return_line_key
+        data_tests: [unique, not_null]
+      - name: original_sales_line_key
+        description: Null when the original sale is unknown (no receipt).
+        data_tests:
+          - relationships:
+              arguments: {to: ref('fct_sales_lines'), field: sales_line_key}
+      - name: store_key
+        data_tests:
+          - not_null
+          - relationships:
+              arguments: {to: ref('dim_store'), field: store_key}
+      - name: product_key
+        data_tests:
+          - not_null
+          - relationships:
+              arguments: {to: ref('dim_product'), field: product_key}
+      - name: customer_key
+        data_tests:
+          - not_null
+          - relationships:
+              arguments: {to: ref('dim_customer'), field: customer_key}
+      - name: refund_excl_vat_aed
+        data_tests:
+          - dbt_expectations.expect_column_values_to_be_between:
+              arguments: {min_value: 0}
+
+  - name: rpt_store_performance_monthly
+    description: >
+      Grain: one store in one month. Net revenue = gross sales - discounts - returns (excl. VAT, AED);
+      returns netted in the month they happen.
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments: {combination_of_columns: [month_start_date, store_code]}
+    columns:
+      - name: return_rate
+        description: Returns / (gross sales - discounts), value-based.
+        data_tests:
+          - dbt_expectations.expect_column_values_to_be_between:
+              arguments: {min_value: 0, max_value: 0.25, row_condition: "transaction_count > 100"}
+              config: {severity: warn}  # a store with a tiny month (opening/closing) can spike

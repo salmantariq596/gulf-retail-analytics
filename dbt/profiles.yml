@@ -1,0 +1,55 @@
+# No secrets in this file: everything sensitive comes from environment variables.
+# Run dbt from the dbt/ folder (dbt reads profiles.yml from the working directory)
+# or set DBT_PROFILES_DIR=dbt.
+#
+#   dev        DuckDB, local, free                      (default)
+#   sf_dev     Snowflake DEV database, your own schemas  (DBT_TARGET=sf_dev)
+#   ci         Snowflake DEV database, one schema per PR (GitHub Actions, Phase 7)
+#   prod       Snowflake PROD database                   (deploys only)
+najm_retail:
+  target: "{{ env_var('DBT_TARGET', 'dev') }}"
+  outputs:
+    dev:
+      type: duckdb
+      path: "{{ env_var('DBT_DUCKDB_PATH', '../data/warehouse/najm_dev.duckdb') }}"
+      schema: dev
+      threads: 4
+
+    sf_dev:
+      type: snowflake
+      account: "{{ env_var('SNOWFLAKE_ACCOUNT', 'not-set') }}"
+      user: "{{ env_var('SNOWFLAKE_USER', 'dbt_user') }}"
+      private_key_path: "{{ env_var('SNOWFLAKE_PRIVATE_KEY_PATH', 'not-set') }}"
+      private_key_passphrase: "{{ env_var('SNOWFLAKE_PRIVATE_KEY_PASSPHRASE', '') }}"
+      role: TRANSFORMER
+      warehouse: TRANSFORM_WH
+      database: DEV
+      schema: "{{ env_var('DBT_DEV_SCHEMA', 'dbt_dev') }}"
+      threads: 8
+      query_tag: dbt_sf_dev
+
+    ci:
+      type: snowflake
+      account: "{{ env_var('SNOWFLAKE_ACCOUNT', 'not-set') }}"
+      user: "{{ env_var('SNOWFLAKE_USER', 'dbt_user') }}"
+      private_key_path: "{{ env_var('SNOWFLAKE_PRIVATE_KEY_PATH', 'not-set') }}"
+      private_key_passphrase: "{{ env_var('SNOWFLAKE_PRIVATE_KEY_PASSPHRASE', '') }}"
+      role: TRANSFORMER
+      warehouse: TRANSFORM_WH
+      database: DEV
+      schema: "{{ env_var('DBT_CI_SCHEMA', 'ci') }}"
+      threads: 8
+      query_tag: dbt_ci
+
+    prod:
+      type: snowflake
+      account: "{{ env_var('SNOWFLAKE_ACCOUNT', 'not-set') }}"
+      user: "{{ env_var('SNOWFLAKE_USER', 'dbt_user') }}"
+      private_key_path: "{{ env_var('SNOWFLAKE_PRIVATE_KEY_PATH', 'not-set') }}"
+      private_key_passphrase: "{{ env_var('SNOWFLAKE_PRIVATE_KEY_PASSPHRASE', '') }}"
+      role: TRANSFORMER
+      warehouse: TRANSFORM_WH
+      database: PROD
+      schema: analytics
+      threads: 8
+      query_tag: dbt_prod

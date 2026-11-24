@@ -1,0 +1,36 @@
+version: 2
+
+models:
+  - name: fct_inventory_daily
+    description: >
+      Periodic snapshot. Grain: one product in one store on one day (end-of-day stock).
+      SEMI-ADDITIVE: sum across stores and products, never across days (use period-end or average).
+      Missing ERP days are carried forward (is_imputed); negative readings floored at 0.
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments: {combination_of_columns: [snapshot_date, store_code, sku]}
+    columns:
+      - name: inventory_key
+        data_tests: [unique, not_null]
+      - name: store_key
+        data_tests:
+          - not_null
+          - relationships:
+              arguments: {to: ref('dim_store'), field: store_key}
+      - name: product_key
+        data_tests:
+          - not_null
+          - relationships:
+              arguments: {to: ref('dim_product'), field: product_key}
+      - name: qty_on_hand
+        description: Stock never negative in the mart (source sync errors are floored and flagged).
+        data_tests:
+          - not_null
+          - dbt_expectations.expect_column_values_to_be_between:
+              arguments: {min_value: 0}
+      - name: is_imputed
+        description: True when the ERP file for the day never arrived (see assert_inventory_imputed_share_is_low).
+      - name: stock_value_at_cost_aed
+        data_tests:
+          - dbt_expectations.expect_column_values_to_be_between:
+              arguments: {min_value: 0}

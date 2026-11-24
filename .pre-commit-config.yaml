@@ -1,0 +1,30 @@
+# Install once:  pre-commit install
+# Run on everything:  pre-commit run --all-files
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+        exclude: ^dbt/seeds/.*\.csv$
+      - id: check-yaml
+        args: [--unsafe]  # dbt YAML contains Jinja
+      - id: check-added-large-files
+        args: [--maxkb=2000]
+      - id: detect-private-key  # Snowflake key-pair auth arrives in Phase 5
+
+  # SQLFluff from the project's own virtualenv, so the version matches requirements.txt
+  - repo: local
+    hooks:
+      - id: sqlfluff-lint
+        name: sqlfluff lint (dbt SQL)
+        entry: sqlfluff lint
+        language: system
+        files: ^dbt/(models|snapshots|tests|analyses|macros)/.*\.sql$
+        require_serial: true
+      - id: pytest
+        name: pytest (generator)
+        entry: pytest -q tests
+        language: system
+        pass_filenames: false
+        files: ^(generator|ingestion|tests)/.*\.py$

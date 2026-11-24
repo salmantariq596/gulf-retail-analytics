@@ -1,0 +1,60 @@
+[sqlfluff]
+dialect = duckdb
+# jinja (not dbt) templater: lints without a warehouse connection, so it runs the
+# same way in pre-commit and CI. dbt builtins (ref, source, var...) are stubbed.
+templater = jinja
+max_line_length = 120
+# AM04: `select *` from an import CTE is the dbt style we want
+# ST06: column order (we group columns by meaning, not by type)
+exclude_rules = AM04, ST06
+large_file_skip_byte_limit = 40000
+
+[sqlfluff:indentation]
+tab_space_size = 4
+indent_unit = space
+implicit_indents = allow
+
+[sqlfluff:templater:jinja]
+apply_dbt_builtins = True
+# Package macros (dbt_utils, dbt_date, dbt.*) are stubbed as Python modules
+library_path = .sqlfluff_libs
+
+# Project macros (dbt/macros) stubbed to render plausible SQL. Keep in sync with
+# the real signatures; the real logic is covered by dbt unit tests.
+[sqlfluff:templater:jinja:macros]
+to_utc = {% macro to_utc(column) %}{{ column }}{% endmacro %}
+money = {% macro money(e) %}round(({{ e }}), 2){% endmacro %}
+excl_vat = {% macro excl_vat(a, r) %}round(({{ a }}) / (1 + ({{ r }})), 2){% endmacro %}
+to_aed = {% macro to_aed(a, r) %}round(({{ a }}) * ({{ r }}), 2){% endmacro %}
+to_local = {% macro to_local(t, h) %}({{ t }} + interval ({{ h }}) hour){% endmacro %}
+business_date = {% macro business_date(t, h) %}cast({{ t }} as date){% endmacro %}
+open_valid_from = {% macro open_valid_from(v, p, o=None) %}cast({{ v }} as timestamp){% endmacro %}
+scd_end = {% macro scd_end() %}cast('9999-12-31' as timestamp){% endmacro %}
+pivot_by_country = {% macro pivot_by_country(c, v, prefix, agg='max') %}max({{ v }}) as {{ prefix }}_ae{% endmacro %}
+hours_between = {% macro hours_between(a, b) %}date_diff('second', {{ a }}, {{ b }}) / 3600.0{% endmacro %}
+incremental_lookback = {% macro incremental_lookback(c, alias=None) %}{{ c }} >= current_date{% endmacro %}
+last_value_ignore_nulls = {% macro last_value_ignore_nulls(e, w) %}last_value({{ e }}) over ({{ w }}){% endmacro %}
+
+[sqlfluff:rules:capitalisation.keywords]
+capitalisation_policy = lower
+
+[sqlfluff:rules:capitalisation.identifiers]
+extended_capitalisation_policy = lower
+
+[sqlfluff:rules:capitalisation.functions]
+extended_capitalisation_policy = lower
+
+[sqlfluff:rules:capitalisation.literals]
+capitalisation_policy = lower
+
+[sqlfluff:rules:capitalisation.types]
+extended_capitalisation_policy = lower
+
+[sqlfluff:rules:aliasing.table]
+aliasing = explicit
+
+[sqlfluff:rules:aliasing.column]
+aliasing = explicit
+
+[sqlfluff:rules:ambiguous.column_references]
+group_by_and_order_by_style = explicit

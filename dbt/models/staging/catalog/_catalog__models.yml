@@ -1,0 +1,30 @@
+version: 2
+
+models:
+  - name: stg_catalog__products
+    description: One row per SKU per daily catalog export (the full export history).
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [sku, export_date]
+    columns:
+      - name: sku
+        data_tests: [not_null]
+      - name: unit_cost_aed
+        data_tests:
+          - not_null
+          - dbt_expectations.expect_column_values_to_be_between:
+              arguments:
+                min_value: 0
+      - name: list_price_aed
+        description: AED, excluding VAT.
+        data_tests:
+          - not_null
+          - dbt_expectations.expect_column_values_to_be_between:
+              arguments:
+                min_value: 0
+                strictly: true
+      - name: is_active
+        data_tests: [not_null]
+      - name: export_date
+        data_tests: [not_null]

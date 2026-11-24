@@ -1,0 +1,69 @@
+version: 2
+
+models:
+  - name: fct_online_orders
+    description: >
+      Accumulating snapshot. Grain: one online order, updated as it moves through placed -> paid ->
+      shipped -> delivered (or cancelled). One date key per milestone; lags in hours come from the
+      event history.
+    data_tests:
+      - dbt_utils.expression_is_true:
+          arguments: {expression: "not (is_cancelled and is_delivered)"}
+      - dbt_expectations.expect_column_pair_values_A_to_be_greater_than_B:
+          arguments: {column_A: shipped_at, column_B: placed_at, row_condition: "shipped_at is not null"}
+      - dbt_expectations.expect_column_pair_values_A_to_be_greater_than_B:
+          arguments: {column_A: delivered_at, column_B: shipped_at, row_condition: "delivered_at is not null"}
+      - dbt_utils.expression_is_true:
+          arguments: {expression: "hours_placed_to_delivered <= 24 * 10"}
+          config:
+            severity: warn  # SLA monitor: a 10-day delivery is a customer-service problem, not bad data
+            where: "is_delivered"
+    columns:
+      - name: order_key
+        data_tests: [unique, not_null]
+      - name: order_id
+        data_tests: [unique, not_null]
+      - name: placed_date_key
+        data_tests:
+          - not_null
+          - relationships:
+              arguments: {to: ref('dim_date'), field: date_key}
+      - name: delivered_date_key
+        data_tests:
+          - relationships:
+              arguments: {to: ref('dim_date'), field: date_key}
+      - name: customer_key
+        data_tests:
+          - not_null
+          - relationships:
+              arguments: {to: ref('dim_customer'), field: customer_key}
+      - name: store_key
+        data_tests:
+          - not_null
+          - relationships:
+              arguments: {to: ref('dim_store'), field: store_key}
+      - name: current_status
+        data_tests:
+          - accepted_values:
+              arguments: {values: ["placed", "paid", "shipped", "delivered", "cancelled"]}
+
+  - name: fct_marketing_spend
+    description: >
+      Transaction fact (daily). Grain: one campaign on one marketing channel in one country on one day.
+      Latest platform restatement only; spend in AED.
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments: {combination_of_columns: [spend_date, campaign_key, country_code]}
+    columns:
+      - name: marketing_spend_key
+        data_tests: [unique, not_null]
+      - name: campaign_key
+        data_tests:
+          - not_null
+          - relationships:
+              arguments: {to: ref('dim_campaign'), field: campaign_key}
+      - name: spend_aed
+        data_tests:
+          - not_null
+          - dbt_expectations.expect_column_values_to_be_between:
+              arguments: {min_value: 0}

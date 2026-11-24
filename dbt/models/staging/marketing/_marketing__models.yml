@@ -1,0 +1,37 @@
+version: 2
+
+models:
+  - name: stg_marketing__spend
+    description: One row per spend date x campaign x country per export file (restated days repeat).
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [spend_date, campaign_id, country_code, source_file]
+      - dbt_expectations.expect_column_pair_values_A_to_be_greater_than_B:
+          arguments:
+            column_A: impressions
+            column_B: clicks
+            or_equal: true
+    columns:
+      - name: spend_date
+        description: >
+          A file restates up to the two previous days and never contains future days
+          (singular test assert_marketing_restatement_window).
+        data_tests: [not_null]
+      - name: marketing_channel
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('marketing_channels')
+                field: marketing_channel
+      - name: currency_code
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('currency_rates')
+                field: currency_code
+      - name: spend_local
+        data_tests:
+          - dbt_expectations.expect_column_values_to_be_between:
+              arguments:
+                min_value: 0

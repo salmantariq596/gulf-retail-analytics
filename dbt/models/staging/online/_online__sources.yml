@@ -1,0 +1,27 @@
+version: 2
+
+sources:
+  - name: online
+    description: >
+      Online store REST API (web and app), loaded incrementally by dlt into `raw_online`.
+      `orders` holds the current state of each order (merged on order_id); `order_events`
+      is the full status history. ~2% of orders arrive 1-2 days late.
+    # DuckDB: raw schemas live in the same file. Snowflake: the separate RAW database.
+    database: "{{ var('raw_database') or ('RAW' if target.type == 'snowflake' else target.database) }}"
+    schema: raw_online
+    config:
+      freshness:
+        warn_after: {count: 36, period: hour}
+        error_after: {count: 72, period: hour}
+      loaded_at_field: updated_at
+    tables:
+      - name: customers
+        description: Online accounts; loyalty_number links to the POS loyalty master when present.
+      - name: orders
+        description: Current state of each order; status is the furthest lifecycle stage reached.
+      - name: orders__lines
+        description: Order lines, unnested by dlt from the `lines` array; joins to orders on _dlt_root_id.
+        config:
+          freshness: null
+      - name: order_events
+        description: One row per status change (placed, paid, shipped, delivered, cancelled).

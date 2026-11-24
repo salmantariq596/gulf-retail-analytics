@@ -1,0 +1,221 @@
+version: 2
+
+# Conformed dimensions shared by every fact. Contracts are enforced: a change to a
+# column name or type fails the build instead of silently breaking dashboards.
+
+models:
+  - name: dim_date
+    description: >
+      One row per calendar day (2020-2030) with Gregorian and Hijri (Umm al-Qura) dates,
+      Ramadan flags, weekends and holidays per country, and retail events.
+    config:
+      contract: {enforced: true}
+    data_tests:
+      - dbt_expectations.expect_table_row_count_to_equal:
+          arguments:
+            value: 4018
+    columns:
+      - {name: date_key, data_type: integer, description: "YYYYMMDD", data_tests: [unique, not_null]}
+      - {name: date_day, data_type: date, data_tests: [unique, not_null]}
+      - {name: calendar_year, data_type: integer}
+      - {name: calendar_quarter, data_type: integer}
+      - {name: month_of_year, data_type: integer}
+      - {name: month_name, data_type: varchar}
+      - {name: month_start_date, data_type: date}
+      - {name: day_of_month, data_type: integer}
+      - {name: iso_day_of_week, data_type: integer, description: "Monday = 1 ... Sunday = 7"}
+      - {name: day_name, data_type: varchar}
+      - {name: iso_week_of_year, data_type: integer}
+      - {name: hijri_date, data_type: varchar, description: "Umm al-Qura, YYYY-MM-DD"}
+      - {name: hijri_year, data_type: integer}
+      - name: hijri_month
+        data_type: integer
+        data_tests:
+          - dbt_expectations.expect_column_values_to_be_between:
+              arguments: {min_value: 1, max_value: 12}
+      - {name: hijri_day, data_type: integer}
+      - {name: hijri_month_name_en, data_type: varchar}
+      - {name: hijri_month_name_ar, data_type: varchar}
+      - {name: is_ramadan, data_type: boolean, description: "Hijri month 9"}
+      - {name: is_ramadan_last_10_nights, data_type: boolean, description: "Peak pre-Eid shopping"}
+      - {name: is_weekend_ae, data_type: boolean, description: "Sat-Sun since 2022-01-01, Fri-Sat before"}
+      - {name: holiday_name_ae, data_type: varchar}
+      - {name: is_holiday_ae, data_type: boolean}
+      - {name: is_weekend_sa, data_type: boolean, description: "Fri-Sat"}
+      - {name: holiday_name_sa, data_type: varchar}
+      - {name: is_holiday_sa, data_type: boolean}
+      - {name: is_weekend_qa, data_type: boolean, description: "Fri-Sat"}
+      - {name: holiday_name_qa, data_type: varchar}
+      - {name: is_holiday_qa, data_type: boolean}
+      - {name: is_white_friday_week, data_type: boolean}
+      - {name: is_dubai_shopping_festival, data_type: boolean, description: "UAE only"}
+      - {name: is_back_to_school, data_type: boolean}
+      - {name: is_eid_al_adha_period, data_type: boolean}
+
+  - name: dim_store
+    description: One row per store version (SCD2 from snap_stores), including the virtual online stores.
+    config:
+      contract: {enforced: true}
+    data_tests:
+      - dbt_utils.mutually_exclusive_ranges:
+          arguments:
+            lower_bound_column: valid_from
+            upper_bound_column: valid_to
+            partition_by: store_id
+            gaps: not_allowed
+    columns:
+      - {name: store_key, data_type: varchar, data_tests: [unique, not_null]}
+      - {name: store_id, data_type: bigint, data_tests: [not_null]}
+      - {name: store_code, data_type: varchar, data_tests: [not_null]}
+      - {name: store_name_en, data_type: varchar}
+      - {name: store_name_ar, data_type: varchar}
+      - name: country_code
+        data_type: varchar
+        data_tests:
+          - accepted_values:
+              arguments: {values: ["AE", "SA", "QA"]}
+      - {name: country_name, data_type: varchar}
+      - {name: city, data_type: varchar}
+      - {name: store_format, data_type: varchar}
+      - {name: is_online_store, data_type: boolean}
+      - {name: currency_code, data_type: varchar}
+      - {name: store_timezone, data_type: varchar}
+      - {name: opened_on, data_type: date}
+      - {name: closed_on, data_type: date}
+      - {name: valid_from, data_type: timestamp, data_tests: [not_null]}
+      - {name: valid_to, data_type: timestamp, data_tests: [not_null]}
+      - {name: is_current, data_type: boolean}
+
+  - name: dim_product
+    description: >
+      One row per product version (SCD2), derived from the daily catalog exports. Facts join
+      to the version valid on the business date, so margin uses the cost at the time of sale.
+    config:
+      contract: {enforced: true}
+    data_tests:
+      - dbt_utils.mutually_exclusive_ranges:
+          arguments:
+            lower_bound_column: valid_from
+            upper_bound_column: valid_to
+            partition_by: sku
+            gaps: not_allowed
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [sku, version_number]
+    columns:
+      - {name: product_key, data_type: varchar, data_tests: [unique, not_null]}
+      - {name: sku, data_type: varchar, data_tests: [not_null]}
+      - {name: product_name_en, data_type: varchar}
+      - {name: product_name_ar, data_type: varchar}
+      - {name: category, data_type: varchar, data_tests: [not_null]}
+      - {name: subcategory, data_type: varchar}
+      - {name: brand, data_type: varchar}
+      - {name: unit_cost_aed, data_type: "decimal(18,2)", description: "Cost in AED, valid for this version"}
+      - {name: list_price_aed, data_type: "decimal(18,2)", description: "List price in AED, excluding VAT"}
+      - name: list_margin_pct
+        data_type: "decimal(9,4)"
+        data_tests:
+          - dbt_expectations.expect_column_values_to_be_between:
+              arguments: {min_value: 0, max_value: 1}
+      - {name: price_band, data_type: varchar}
+      - {name: is_active, data_type: boolean}
+      - {name: launched_on, data_type: date}
+      - {name: version_number, data_type: integer}
+      - {name: changed_on, data_type: date, description: "Export date on which this version first appeared"}
+      - {name: valid_from, data_type: timestamp, data_tests: [not_null]}
+      - {name: valid_to, data_type: timestamp, data_tests: [not_null]}
+      - {name: is_current, data_type: boolean}
+
+  - name: dim_customer
+    description: >
+      One row per customer version (SCD2). Loyalty members are versioned from snap_customers;
+      online-only accounts have a single version; key '-1' is the anonymous/guest member.
+      Contains no direct PII.
+    config:
+      contract: {enforced: true}
+    data_tests:
+      - dbt_utils.mutually_exclusive_ranges:
+          arguments:
+            lower_bound_column: valid_from
+            upper_bound_column: valid_to
+            partition_by: customer_id
+            gaps: not_allowed
+    columns:
+      - {name: customer_key, data_type: varchar, data_tests: [unique, not_null]}
+      - name: customer_id
+        data_type: varchar
+        description: "Unified id: L-<loyalty_number> or O-<online_customer_id>"
+        data_tests: [not_null]
+      - name: customer_type
+        data_type: varchar
+        data_tests:
+          - accepted_values:
+              arguments: {values: ["loyalty", "online_only", "anonymous"]}
+      - {name: loyalty_number, data_type: varchar}
+      - {name: country_code, data_type: varchar}
+      - {name: home_store_id, data_type: bigint}
+      - name: loyalty_tier
+        data_type: varchar
+        data_tests:
+          - accepted_values:
+              arguments: {values: ["blue", "silver", "gold", "platinum", "none"]}
+      - {name: acquisition_channel, data_type: varchar, description: "First-touch channel, used for ROAS"}
+      - {name: customer_since, data_type: date}
+      - {name: first_purchase_date, data_type: date}
+      - {name: is_loyalty_member, data_type: boolean}
+      - {name: has_online_account, data_type: boolean}
+      - {name: valid_from, data_type: timestamp, data_tests: [not_null]}
+      - {name: valid_to, data_type: timestamp, data_tests: [not_null]}
+      - {name: is_current, data_type: boolean}
+
+  - name: dim_channel
+    description: Sales channel (where the sale happened).
+    config:
+      contract: {enforced: true}
+    columns:
+      - {name: channel_key, data_type: varchar, data_tests: [unique, not_null]}
+      - name: channel_code
+        data_type: varchar
+        data_tests:
+          - unique
+          - accepted_values:
+              arguments: {values: ["store", "web", "app"]}
+      - {name: channel_name, data_type: varchar}
+      - {name: channel_group, data_type: varchar}
+
+  - name: dim_promotion
+    description: One row per promotion; key '-1' means no promotion.
+    config:
+      contract: {enforced: true}
+    columns:
+      - {name: promotion_key, data_type: varchar, data_tests: [unique, not_null]}
+      - {name: promotion_code, data_type: varchar, data_tests: [unique, not_null]}
+      - {name: promotion_name, data_type: varchar}
+      - {name: discount_type, data_type: varchar}
+      - {name: discount_value, data_type: "decimal(10,2)"}
+      - {name: starts_on, data_type: date}
+      - {name: ends_on, data_type: date}
+      - {name: is_always_on, data_type: boolean}
+
+  - name: dim_campaign
+    description: One row per ad campaign, with its latest name (campaigns get renamed).
+    config:
+      contract: {enforced: true}
+    columns:
+      - {name: campaign_key, data_type: varchar, data_tests: [unique, not_null]}
+      - {name: campaign_id, data_type: varchar, data_tests: [unique, not_null]}
+      - {name: campaign_name, data_type: varchar}
+      - name: marketing_channel
+        data_type: varchar
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('marketing_channels')
+                field: marketing_channel
+      - {name: marketing_channel_name, data_type: varchar}
+      - {name: marketing_channel_type, data_type: varchar}
+      - {name: is_paid, data_type: boolean}
+      - {name: country_code, data_type: varchar}
+      - {name: is_always_on, data_type: boolean}
+      - {name: first_spend_date, data_type: date}
+      - {name: last_spend_date, data_type: date}

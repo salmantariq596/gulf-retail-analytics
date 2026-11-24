@@ -1,0 +1,49 @@
+version: 2
+
+sources:
+  - name: pos
+    description: >
+      Store tills (PostgreSQL `pos` schema), loaded by dlt into `raw_pos`. Prices are
+      VAT-inclusive in the store's local currency; timestamps are UTC. Known problems:
+      duplicate lines after till restarts, training-mode test sales, returns without receipts.
+    # DuckDB: raw schemas live in the same file. Snowflake: the separate RAW database.
+    database: "{{ var('raw_database') or ('RAW' if target.type == 'snowflake' else target.database) }}"
+    schema: raw_pos
+    config:
+      freshness:
+        warn_after: {count: 36, period: hour}
+        error_after: {count: 72, period: hour}
+    tables:
+      - name: stores
+        description: Store master, including the three virtual online stores (ONL-AE/SA/QA).
+        config:
+          freshness: null
+      - name: cashiers
+        description: Till users; `TRN-*` codes are training-mode logins that create test sales.
+        config:
+          freshness: null
+      - name: customers
+        description: Loyalty programme members; the customer master shared with online via loyalty_number.
+        config:
+          loaded_at_field: updated_at
+      - name: promotions
+        config:
+          freshness: null
+      - name: sales
+        description: One row per till transaction (sale header).
+        config:
+          loaded_at_field: updated_at
+      - name: sale_lines
+        description: One row per product line; re-sent lines after a till restart get a new sale_line_id.
+        config:
+          loaded_at_field: created_at
+      - name: payments
+        config:
+          loaded_at_field: paid_at
+      - name: returns
+        description: Return receipts; original_sale_id is null when the customer has no receipt.
+        config:
+          loaded_at_field: updated_at
+      - name: return_lines
+        config:
+          loaded_at_field: created_at

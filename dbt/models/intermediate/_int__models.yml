@@ -1,0 +1,79 @@
+version: 2
+
+models:
+  - name: int_pos_sale_lines_deduped
+    description: POS lines with till re-sends removed (first copy of each sale_id + line_number kept).
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [sale_id, line_number]
+    columns:
+      - name: sale_line_id
+        data_tests: [unique, not_null]
+
+  - name: int_pos_sale_lines_valid
+    description: Deduplicated POS lines excluding voided sales, training-mode sales and the test SKU.
+    columns:
+      - name: source_line_id
+        data_tests: [unique, not_null]
+
+  - name: int_online_order_lines_valid
+    description: Online order lines with order_id attached; cancelled orders excluded.
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [transaction_id, line_number]
+    columns:
+      - name: store_id
+        data_tests: [not_null]
+
+  - name: int_customer_identity_map
+    description: Maps every source customer id (POS member, online account) to the unified customer_id.
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [source_system, source_customer_id]
+    columns:
+      - name: customer_id
+        data_tests: [not_null]
+
+  - name: int_products_versioned
+    description: Product versions (SCD2) detected by comparing consecutive catalog exports.
+    data_tests:
+      - dbt_utils.mutually_exclusive_ranges:
+          arguments:
+            lower_bound_column: valid_from
+            upper_bound_column: valid_to
+            partition_by: sku
+            gaps: not_allowed
+
+  - name: int_sales_lines_unioned
+    description: POS and online sales lines in one shape.
+
+  - name: int_sales_lines_enriched
+    description: >
+      Sales lines with business date (local), VAT split, AED amounts, unified customer and
+      the product cost valid on the sale date.
+    data_tests:
+      - dbt_utils.equal_rowcount:
+          arguments:
+            compare_model: ref('int_sales_lines_unioned')
+    columns:
+      - name: sales_line_id
+        data_tests: [unique, not_null]
+      - name: business_date
+        data_tests: [not_null]
+      - name: unit_cost_aed
+        description: Must never be null; an inner join to product versions would otherwise drop the line.
+        data_tests: [not_null]
+      - name: net_excl_vat_aed
+        data_tests:
+          - dbt_expectations.expect_column_values_to_be_between:
+              arguments: {min_value: 0}
+
+  - name: int_marketing_spend_latest
+    description: Daily spend per campaign and country, latest restatement only, in AED.
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [spend_date, campaign_id, country_code]

@@ -1,0 +1,8 @@
+country_code,iso_day_of_week,day_name,valid_from,valid_to
+AE,5,Friday,2000-01-01,2021-12-31
+AE,6,Saturday,2000-01-01,9999-12-31
+AE,7,Sunday,2022-01-01,9999-12-31
+SA,5,Friday,2013-06-29,9999-12-31
+SA,6,Saturday,2013-06-29,9999-12-31
+QA,5,Friday,2000-01-01,9999-12-31
+QA,6,Saturday,2000-01-01,9999-12-31

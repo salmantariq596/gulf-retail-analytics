@@ -1,0 +1,211 @@
+holiday_date,country_code,holiday_name
+2022-02-22,SA,Saudi Founding Day
+2022-05-02,AE,Eid al-Fitr
+2022-05-02,SA,Eid al-Fitr
+2022-05-02,QA,Eid al-Fitr
+2022-05-03,AE,Eid al-Fitr
+2022-05-03,SA,Eid al-Fitr
+2022-05-03,QA,Eid al-Fitr
+2022-05-04,AE,Eid al-Fitr
+2022-05-04,SA,Eid al-Fitr
+2022-05-04,QA,Eid al-Fitr
+2022-05-05,AE,Eid al-Fitr
+2022-05-05,SA,Eid al-Fitr
+2022-05-05,QA,Eid al-Fitr
+2022-07-08,AE,Arafat Day
+2022-07-08,SA,Arafat Day
+2022-07-08,QA,Arafat Day
+2022-07-09,AE,Eid al-Adha
+2022-07-09,SA,Eid al-Adha
+2022-07-09,QA,Eid al-Adha
+2022-07-10,AE,Eid al-Adha
+2022-07-10,SA,Eid al-Adha
+2022-07-10,QA,Eid al-Adha
+2022-07-11,AE,Eid al-Adha
+2022-07-11,SA,Eid al-Adha
+2022-07-11,QA,Eid al-Adha
+2022-07-12,AE,Eid al-Adha
+2022-07-12,SA,Eid al-Adha
+2022-07-12,QA,Eid al-Adha
+2022-09-23,SA,Saudi National Day
+2022-11-25,AE,White Friday
+2022-11-25,SA,White Friday
+2022-11-25,QA,White Friday
+2022-12-02,AE,UAE National Day
+2022-12-03,AE,UAE National Day
+2022-12-18,QA,Qatar National Day
+2023-02-22,SA,Saudi Founding Day
+2023-04-21,AE,Eid al-Fitr
+2023-04-21,SA,Eid al-Fitr
+2023-04-21,QA,Eid al-Fitr
+2023-04-22,AE,Eid al-Fitr
+2023-04-22,SA,Eid al-Fitr
+2023-04-22,QA,Eid al-Fitr
+2023-04-23,AE,Eid al-Fitr
+2023-04-23,SA,Eid al-Fitr
+2023-04-23,QA,Eid al-Fitr
+2023-04-24,AE,Eid al-Fitr
+2023-04-24,SA,Eid al-Fitr
+2023-04-24,QA,Eid al-Fitr
+2023-06-27,AE,Arafat Day
+2023-06-27,SA,Arafat Day
+2023-06-27,QA,Arafat Day
+2023-06-28,AE,Eid al-Adha
+2023-06-28,SA,Eid al-Adha
+2023-06-28,QA,Eid al-Adha
+2023-06-29,AE,Eid al-Adha
+2023-06-29,SA,Eid al-Adha
+2023-06-29,QA,Eid al-Adha
+2023-06-30,AE,Eid al-Adha
+2023-06-30,SA,Eid al-Adha
+2023-06-30,QA,Eid al-Adha
+2023-07-01,AE,Eid al-Adha
+2023-07-01,SA,Eid al-Adha
+2023-07-01,QA,Eid al-Adha
+2023-09-23,SA,Saudi National Day
+2023-11-24,AE,White Friday
+2023-11-24,SA,White Friday
+2023-11-24,QA,White Friday
+2023-12-02,AE,UAE National Day
+2023-12-03,AE,UAE National Day
+2023-12-18,QA,Qatar National Day
+2024-02-22,SA,Saudi Founding Day
+2024-04-10,AE,Eid al-Fitr
+2024-04-10,SA,Eid al-Fitr
+2024-04-10,QA,Eid al-Fitr
+2024-04-11,AE,Eid al-Fitr
+2024-04-11,SA,Eid al-Fitr
+2024-04-11,QA,Eid al-Fitr
+2024-04-12,AE,Eid al-Fitr
+2024-04-12,SA,Eid al-Fitr
+2024-04-12,QA,Eid al-Fitr
+2024-04-13,AE,Eid al-Fitr
+2024-04-13,SA,Eid al-Fitr
+2024-04-13,QA,Eid al-Fitr
+2024-06-15,AE,Arafat Day
+2024-06-15,SA,Arafat Day
+2024-06-15,QA,Arafat Day
+2024-06-16,AE,Eid al-Adha
+2024-06-16,SA,Eid al-Adha
+2024-06-16,QA,Eid al-Adha
+2024-06-17,AE,Eid al-Adha
+2024-06-17,SA,Eid al-Adha
+2024-06-17,QA,Eid al-Adha
+2024-06-18,AE,Eid al-Adha
+2024-06-18,SA,Eid al-Adha
+2024-06-18,QA,Eid al-Adha
+2024-06-19,AE,Eid al-Adha
+2024-06-19,SA,Eid al-Adha
+2024-06-19,QA,Eid al-Adha
+2024-09-23,SA,Saudi National Day
+2024-11-29,AE,White Friday
+2024-11-29,SA,White Friday
+2024-11-29,QA,White Friday
+2024-12-02,AE,UAE National Day
+2024-12-03,AE,UAE National Day
+2024-12-18,QA,Qatar National Day
+2025-02-22,SA,Saudi Founding Day
+2025-03-30,AE,Eid al-Fitr
+2025-03-30,SA,Eid al-Fitr
+2025-03-30,QA,Eid al-Fitr
+2025-03-31,AE,Eid al-Fitr
+2025-03-31,SA,Eid al-Fitr
+2025-03-31,QA,Eid al-Fitr
+2025-04-01,AE,Eid al-Fitr
+2025-04-01,SA,Eid al-Fitr
+2025-04-01,QA,Eid al-Fitr
+2025-04-02,AE,Eid al-Fitr
+2025-04-02,SA,Eid al-Fitr
+2025-04-02,QA,Eid al-Fitr
+2025-06-05,AE,Arafat Day
+2025-06-05,SA,Arafat Day
+2025-06-05,QA,Arafat Day
+2025-06-06,AE,Eid al-Adha
+2025-06-06,SA,Eid al-Adha
+2025-06-06,QA,Eid al-Adha
+2025-06-07,AE,Eid al-Adha
+2025-06-07,SA,Eid al-Adha
+2025-06-07,QA,Eid al-Adha
+2025-06-08,AE,Eid al-Adha
+2025-06-08,SA,Eid al-Adha
+2025-06-08,QA,Eid al-Adha
+2025-06-09,AE,Eid al-Adha
+2025-06-09,SA,Eid al-Adha
+2025-06-09,QA,Eid al-Adha
+2025-09-23,SA,Saudi National Day
+2025-11-28,AE,White Friday
+2025-11-28,SA,White Friday
+2025-11-28,QA,White Friday
+2025-12-02,AE,UAE National Day
+2025-12-03,AE,UAE National Day
+2025-12-18,QA,Qatar National Day
+2026-02-22,SA,Saudi Founding Day
+2026-03-20,AE,Eid al-Fitr
+2026-03-20,SA,Eid al-Fitr
+2026-03-20,QA,Eid al-Fitr
+2026-03-21,AE,Eid al-Fitr
+2026-03-21,SA,Eid al-Fitr
+2026-03-21,QA,Eid al-Fitr
+2026-03-22,AE,Eid al-Fitr
+2026-03-22,SA,Eid al-Fitr
+2026-03-22,QA,Eid al-Fitr
+2026-03-23,AE,Eid al-Fitr
+2026-03-23,SA,Eid al-Fitr
+2026-03-23,QA,Eid al-Fitr
+2026-05-26,AE,Arafat Day
+2026-05-26,SA,Arafat Day
+2026-05-26,QA,Arafat Day
+2026-05-27,AE,Eid al-Adha
+2026-05-27,SA,Eid al-Adha
+2026-05-27,QA,Eid al-Adha
+2026-05-28,AE,Eid al-Adha
+2026-05-28,SA,Eid al-Adha
+2026-05-28,QA,Eid al-Adha
+2026-05-29,AE,Eid al-Adha
+2026-05-29,SA,Eid al-Adha
+2026-05-29,QA,Eid al-Adha
+2026-05-30,AE,Eid al-Adha
+2026-05-30,SA,Eid al-Adha
+2026-05-30,QA,Eid al-Adha
+2026-09-23,SA,Saudi National Day
+2026-11-27,AE,White Friday
+2026-11-27,SA,White Friday
+2026-11-27,QA,White Friday
+2026-12-02,AE,UAE National Day
+2026-12-03,AE,UAE National Day
+2026-12-18,QA,Qatar National Day
+2027-02-22,SA,Saudi Founding Day
+2027-03-10,AE,Eid al-Fitr
+2027-03-10,SA,Eid al-Fitr
+2027-03-10,QA,Eid al-Fitr
+2027-03-11,AE,Eid al-Fitr
+2027-03-11,SA,Eid al-Fitr
+2027-03-11,QA,Eid al-Fitr
+2027-03-12,AE,Eid al-Fitr
+2027-03-12,SA,Eid al-Fitr
+2027-03-12,QA,Eid al-Fitr
+2027-03-13,AE,Eid al-Fitr
+2027-03-13,SA,Eid al-Fitr
+2027-03-13,QA,Eid al-Fitr
+2027-05-15,AE,Arafat Day
+2027-05-15,SA,Arafat Day
+2027-05-15,QA,Arafat Day
+2027-05-16,AE,Eid al-Adha
+2027-05-16,SA,Eid al-Adha
+2027-05-16,QA,Eid al-Adha
+2027-05-17,AE,Eid al-Adha
+2027-05-17,SA,Eid al-Adha
+2027-05-17,QA,Eid al-Adha
+2027-05-18,AE,Eid al-Adha
+2027-05-18,SA,Eid al-Adha
+2027-05-18,QA,Eid al-Adha
+2027-05-19,AE,Eid al-Adha
+2027-05-19,SA,Eid al-Adha
+2027-05-19,QA,Eid al-Adha
+2027-09-23,SA,Saudi National Day
+2027-11-26,AE,White Friday
+2027-11-26,SA,White Friday
+2027-11-26,QA,White Friday
+2027-12-02,AE,UAE National Day
+2027-12-03,AE,UAE National Day
+2027-12-18,QA,Qatar National Day

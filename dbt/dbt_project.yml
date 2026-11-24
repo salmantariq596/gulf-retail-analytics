@@ -1,0 +1,88 @@
+name: najm_retail
+version: "1.0.0"
+config-version: 2
+profile: najm_retail
+
+model-paths: ["models"]
+seed-paths: ["seeds"]
+snapshot-paths: ["snapshots"]
+test-paths: ["tests"]
+analysis-paths: ["analyses"]
+macro-paths: ["macros"]
+clean-targets: ["target", "dbt_packages"]
+
+vars:
+  # Raw data lives in the warehouse's own database on DuckDB, and in a separate RAW
+  # database on Snowflake (Phase 5): sources read from var('raw_database').
+  raw_database: null
+  # Test SKU the POS team uses for till checks; never a real product.
+  test_sku: "TEST-0000"
+  countries: ["AE", "SA", "QA"]
+  # Reporting timezone for dbt_date / dbt_expectations recency checks (head office in Dubai)
+  "dbt_date:time_zone": "Asia/Dubai"
+  # Incremental facts reprocess this many business days on every run. Online orders
+  # arrive up to 2 days late and can be cancelled within 48h, so 3 days covers both.
+  lookback_days: 3
+  # Open-ended SCD2 bounds
+  scd_start: "1900-01-01"
+  scd_end: "9999-12-31"
+
+models:
+  najm_retail:
+    staging:
+      +materialized: view
+      +schema: staging
+      +docs:
+        node_color: "#8fa3b8"
+    intermediate:
+      # views, not ephemeral: intermediate models are tested and queried while debugging
+      +materialized: view
+      +schema: intermediate
+      +docs:
+        node_color: "#c9a66b"
+    marts:
+      +materialized: table
+      +schema: marts
+      +docs:
+        node_color: "#4f7cac"
+
+snapshots:
+  najm_retail:
+    +schema: snapshots
+
+seeds:
+  najm_retail:
+    +schema: seeds
+    currency_rates:
+      +column_types:
+        aed_per_unit: decimal(18,8)
+        units_per_usd: decimal(18,4)
+        valid_from: date
+        valid_to: date
+    vat_rates:
+      +column_types:
+        vat_rate: decimal(5,4)
+        valid_from: date
+        valid_to: date
+    country_weekends:
+      +column_types:
+        iso_day_of_week: integer
+        valid_from: date
+        valid_to: date
+    hijri_calendar:
+      +column_types:
+        date_day: date
+        hijri_year: integer
+        hijri_month: integer
+        hijri_day: integer
+    gulf_holidays:
+      +column_types:
+        holiday_date: date
+    retail_events:
+      +column_types:
+        start_date: date
+        end_date: date
+        country_code: varchar
+    marketing_channels:
+      +column_types:
+        is_paid: boolean

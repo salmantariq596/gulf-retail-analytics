@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "gulf-retail-analytics"
+version = "0.1.0"
+description = "Najm Retail data generator, mock API and dlt ingestion for the Gulf Retail Analytics Warehouse"
+requires-python = ">=3.11"
+
+[project.scripts]
+najm-gen = "najm_gen.cli:main"
+najm-ingest = "najm_ingest.cli:main"
+
+[tool.setuptools]
+packages = ["najm_gen", "najm_ingest"]
+
+[tool.setuptools.package-dir]
+najm_gen = "generator/najm_gen"
+najm_ingest = "ingestion/najm_ingest"

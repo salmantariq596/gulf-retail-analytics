@@ -1,0 +1,62 @@
+version: 2
+
+models:
+  - name: stg_erp__stock_on_hand
+    description: End-of-day stock per store and SKU, one row per store x SKU x snapshot date.
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [snapshot_date, store_code, sku]
+      - dbt_expectations.expect_column_pair_values_to_be_equal:
+          arguments:
+            column_A: snapshot_date
+            column_B: file_date
+    columns:
+      - name: snapshot_date
+        data_tests: [not_null]
+      - name: store_code
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('stg_pos__stores')
+                field: store_code
+      - name: sku
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('stg_catalog__products')
+                field: sku
+      - name: qty_on_hand
+        description: Can be negative after an ERP sync error; floored at 0 in the marts.
+        data_tests:
+          - not_null
+          - dbt_expectations.expect_column_values_to_be_between:
+              arguments:
+                min_value: 0
+              config:
+                severity: warn  # expected: rare sync errors; documented and handled downstream
+
+  - name: stg_erp__purchase_orders
+    description: One row per PO line per event (ordered, received).
+    data_tests:
+      - dbt_utils.unique_combination_of_columns:
+          arguments:
+            combination_of_columns: [po_number, sku, po_line_event]
+      - dbt_expectations.expect_column_pair_values_A_to_be_greater_than_B:
+          arguments:
+            column_A: received_on
+            column_B: ordered_on
+            row_condition: "received_on is not null"
+    columns:
+      - name: po_number
+        data_tests: [not_null]
+      - name: qty_ordered
+        data_tests:
+          - dbt_expectations.expect_column_values_to_be_between:
+              arguments:
+                min_value: 1
+      - name: po_line_event
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: ["ordered", "received"]

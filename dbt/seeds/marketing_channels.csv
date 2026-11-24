@@ -1,0 +1,8 @@
+marketing_channel,channel_name,channel_type,is_paid
+organic,Organic / walk-in,organic,false
+google_ads,Google Ads,paid_search,true
+meta,Meta (Facebook & Instagram),paid_social,true
+tiktok,TikTok,paid_social,true
+snapchat,Snapchat,paid_social,true
+email,Email (CRM),owned,true
+affiliate,Affiliates,affiliate,true

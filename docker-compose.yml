@@ -1,0 +1,42 @@
+name: najm-retail
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: najm-pos-db
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-najm_pos}
+      POSTGRES_USER: ${POSTGRES_USER:-najm}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-najm_local_pw}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - pos_data:/var/lib/postgresql/data
+      - ./generator/sql:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-najm} -d ${POSTGRES_DB:-najm_pos}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  mock-api:
+    build:
+      context: ./generator
+      dockerfile: Dockerfile
+    container_name: najm-online-api
+    environment:
+      ONLINE_DATA_DIR: /data/online
+    ports:
+      - "${MOCK_API_PORT:-8000}:8000"
+    volumes:
+      - ./data/landing/online:/data/online:ro
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  # Lightdash (+ its own Postgres) is added in Phase 6.
+
+volumes:
+  pos_data:
