@@ -45,7 +45,7 @@ metrics:
     label: Transactions
     description: Distinct POS receipts plus online orders.
     type: simple
-    type_params: {measure: transactions}
+    type_params: {measure: transaction_count}
 
   - name: ad_spend
     label: Marketing spend (AED)

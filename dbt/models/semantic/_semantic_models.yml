@@ -28,7 +28,7 @@ semantic_models:
       - {name: cogs, agg: sum, expr: cogs_aed}
       - {name: vat_on_sales, agg: sum, expr: vat_aed}
       - {name: units_sold, agg: sum, expr: quantity}
-      - {name: transactions, agg: count_distinct, expr: "source_system || '-' || transaction_id"}
+      - {name: transaction_count, agg: count_distinct, expr: "source_system || '-' || transaction_id"}
       - name: purchasing_customers
         description: Distinct identified customers (anonymous walk-ins and guests excluded).
         agg: count_distinct
