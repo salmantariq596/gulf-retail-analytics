@@ -1,0 +1,89 @@
+name: Deploy
+
+# On merge to main: build what changed in Snowflake PROD, then publish the dbt docs site to
+# GitHub Pages. The published manifest.json is also the production state that slim CI
+# (ci.yml) compares pull requests against.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      full_build:
+        description: Build every model, not only what changed
+        type: boolean
+        default: false
+
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    environment:
+      name: github-pages
+      url: ${{ steps.pages.outputs.page_url }}
+    env:
+      SNOWFLAKE_ACCOUNT: ${{ secrets.SNOWFLAKE_ACCOUNT }}
+      SNOWFLAKE_USER: github_ci
+      SNOWFLAKE_PRIVATE_KEY_PASSPHRASE: ${{ secrets.SNOWFLAKE_CI_PRIVATE_KEY_PASSPHRASE }}
+      PROD_STATE_URL: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/manifest.json
+    defaults:
+      run:
+        working-directory: dbt
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install dbt
+        run: pip install "dbt-core~=1.11.0" "dbt-snowflake~=1.11.0"
+      - name: Private key
+        env:
+          KEY: ${{ secrets.SNOWFLAKE_CI_PRIVATE_KEY }}
+        run: |
+          printf '%s\n' "$KEY" > "$RUNNER_TEMP/github_ci.p8"
+          chmod 600 "$RUNNER_TEMP/github_ci.p8"
+          echo "SNOWFLAKE_PRIVATE_KEY_PATH=$RUNNER_TEMP/github_ci.p8" >> "$GITHUB_ENV"
+      - name: dbt deps
+        run: dbt deps --quiet
+      - name: Previous production state
+        id: state
+        run: |
+          mkdir -p prev-state
+          if [ "${{ inputs.full_build }}" != "true" ] && curl -sfL "$PROD_STATE_URL" -o prev-state/manifest.json; then
+            echo "found=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "found=false" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Build production
+        run: |
+          if [ "${{ steps.state.outputs.found }}" = "true" ]; then
+            dbt build --target prod --select state:modified+ --state prev-state
+          else
+            dbt build --target prod
+          fi
+      - name: Generate docs
+        run: dbt docs generate --target prod
+      - name: Assemble the site
+        run: |
+          mkdir -p ../site
+          cp target/index.html target/manifest.json target/catalog.json ../site/
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+      - name: Publish to GitHub Pages
+        id: pages
+        uses: actions/deploy-pages@v4
+      - name: Remove the key
+        if: always()
+        working-directory: .
+        run: rm -f "$RUNNER_TEMP/github_ci.p8"

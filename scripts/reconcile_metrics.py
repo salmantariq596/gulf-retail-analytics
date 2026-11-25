@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import csv
 import math
+import os
 import subprocess
 import sys
 import tempfile
@@ -22,7 +23,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from semantic_export import EXPORTS, ROOT, SemanticLayer, expand_sql, translate  # noqa: E402
 
 DBT_DIR = ROOT / "dbt"
-WAREHOUSE = ROOT / "data" / "warehouse" / "najm_dev.duckdb"
+# same variable as ingestion (najm_ingest.config); CI points it at its own sample warehouse
+WAREHOUSE = Path(os.getenv("DUCKDB_PATH", "data/warehouse/najm_dev.duckdb"))
+WAREHOUSE = WAREHOUSE if WAREHOUSE.is_absolute() else ROOT / WAREHOUSE
 MF = Path(sys.executable).with_name("mf.exe" if sys.platform == "win32" else "mf")
 # Both sides aggregate the same decimals in the same warehouse, so only float noise from the
 # CSV round trip is allowed. An absolute tolerance would hide errors in small ratios.

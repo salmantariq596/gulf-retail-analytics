@@ -101,18 +101,26 @@ create user if not exists dlt_user
     comment = 'dlt ingestion';
 create user if not exists dbt_user
     type = service default_role = transformer default_warehouse = transform_wh
-    comment = 'dbt (CI and prod deploys)';
+    comment = 'dbt (local prod builds, Dagster)';
 create user if not exists lightdash_user
     type = service default_role = reporter default_warehouse = bi_wh
     comment = 'Lightdash dashboards';
+-- GitHub Actions (slim CI + deploy). Its own key, stored only as a GitHub secret, so a
+-- leaked CI secret is revoked by disabling this one user.
+create user if not exists github_ci
+    type = service default_role = transformer default_warehouse = transform_wh
+    comment = 'GitHub Actions: slim CI and deploys';
 
 grant role loader      to user dlt_user;
 grant role transformer to user dbt_user;
 grant role reporter    to user lightdash_user;
+grant role transformer to user github_ci;
 
 -- alter user dlt_user       set rsa_public_key = '<paste from generate_keypair.py>';
 -- alter user dbt_user       set rsa_public_key = '<paste from generate_keypair.py>';
 -- alter user lightdash_user set rsa_public_key = '<paste from generate_keypair.py>';
+-- github_ci: snowflake/setup_github_ci.py generates its key in memory, sets the public key
+-- and uploads the private key to the repository's GitHub secrets.
 
 -- Your own login: give yourself the dev role. Names containing @ or . must be in
 -- double quotes, and quoted names are case-sensitive (check with select current_user();)

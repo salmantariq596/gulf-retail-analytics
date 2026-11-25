@@ -1,0 +1,129 @@
+name: CI
+
+# Every pull request into main:
+#   lint        pre-commit: SQLFluff, MetricFlow-export sync, YAML, secrets, fast tests
+#   e2e-duckdb  generate a small sample -> dlt -> DuckDB -> dbt build -> MetricFlow reconciliation
+#   slim-ci     Snowflake: build only what changed (state:modified+), deferring to production,
+#               in a temporary ci_pr_<number> schema that is dropped afterwards
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install
+        run: pip install -r requirements.txt && pip install -e .
+      - name: pre-commit (SQLFluff, export sync, YAML, private keys, tests)
+        run: pre-commit run --all-files --show-diff-on-failure
+
+  e2e-duckdb:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: najm
+          POSTGRES_PASSWORD: najm_local_pw
+          POSTGRES_DB: najm_pos
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U najm" --health-interval 5s --health-timeout 5s --health-retries 12
+    env:
+      POSTGRES_HOST: 127.0.0.1
+      PYTHONIOENCODING: utf-8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install
+        run: pip install -r requirements.txt && pip install -e .
+      - name: Sample -> dlt -> DuckDB -> dbt build -> MetricFlow reconciliation
+        run: bash scripts/ci_e2e.sh
+      - name: Dagster code location loads as one connected graph
+        run: pytest -q tests -m slow
+
+  slim-ci:
+    runs-on: ubuntu-24.04
+    needs: lint
+    timeout-minutes: 30
+    env:
+      SNOWFLAKE_ACCOUNT: ${{ secrets.SNOWFLAKE_ACCOUNT }}
+      SNOWFLAKE_USER: github_ci
+      SNOWFLAKE_PRIVATE_KEY_PASSPHRASE: ${{ secrets.SNOWFLAKE_CI_PRIVATE_KEY_PASSPHRASE }}
+      DBT_CI_SCHEMA: ci_pr_${{ github.event.pull_request.number || github.run_id }}
+      PROD_STATE_URL: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/manifest.json
+    defaults:
+      run:
+        working-directory: dbt
+    steps:
+      - name: Skip without Snowflake secrets (e.g. pull requests from forks)
+        id: secrets
+        working-directory: .
+        run: echo "present=${{ secrets.SNOWFLAKE_CI_PRIVATE_KEY != '' }}" >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@v4
+        if: steps.secrets.outputs.present == 'true'
+      - uses: actions/setup-python@v5
+        if: steps.secrets.outputs.present == 'true'
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install dbt
+        if: steps.secrets.outputs.present == 'true'
+        run: pip install "dbt-core~=1.11.0" "dbt-snowflake~=1.11.0"
+      - name: Private key
+        if: steps.secrets.outputs.present == 'true'
+        env:
+          KEY: ${{ secrets.SNOWFLAKE_CI_PRIVATE_KEY }}
+        run: |
+          printf '%s\n' "$KEY" > "$RUNNER_TEMP/github_ci.p8"
+          chmod 600 "$RUNNER_TEMP/github_ci.p8"
+          echo "SNOWFLAKE_PRIVATE_KEY_PATH=$RUNNER_TEMP/github_ci.p8" >> "$GITHUB_ENV"
+      - name: dbt deps
+        if: steps.secrets.outputs.present == 'true'
+        run: dbt deps --quiet
+      - name: Production state (manifest published with the docs site)
+        if: steps.secrets.outputs.present == 'true'
+        id: state
+        run: |
+          mkdir -p prod-state
+          if curl -sfL "$PROD_STATE_URL" -o prod-state/manifest.json; then
+            echo "found=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "found=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::No production manifest yet: building the whole project (sampled) in $DBT_CI_SCHEMA"
+          fi
+      - name: Slim CI build
+        if: steps.secrets.outputs.present == 'true'
+        run: |
+          if [ "${{ steps.state.outputs.found }}" = "true" ]; then
+            dbt build --target ci --select state:modified+ --defer --state prod-state
+          else
+            dbt build --target ci
+          fi
+      - name: Drop the CI schemas
+        if: always() && steps.secrets.outputs.present == 'true'
+        run: |
+          dbt run-operation drop_ci_schemas --target ci --args "{prefix: $DBT_CI_SCHEMA}"
+      - name: Remove the key
+        if: always()
+        working-directory: .
+        run: rm -f "$RUNNER_TEMP/github_ci.p8"
