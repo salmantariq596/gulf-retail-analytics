@@ -177,7 +177,7 @@ models:
         dimension:
           hidden: true
   - name: total_transaction_count
-    description: 'MetricFlow measure `transaction_count` from sales_lines: count_distinct(source_system || ''-''
+    description: 'MetricFlow measure `transaction_count` from sales_lines: count(distinct source_system || ''-''
       || transaction_id)'
     config:
       meta:
@@ -203,6 +203,267 @@ models:
           hidden: true
   - name: total_units_returned
     description: 'MetricFlow measure `units_returned` from returns: sum(quantity)'
+    config:
+      meta:
+        dimension:
+          hidden: true
+- name: mtr_merchandising_monthly
+  description: 'Sales, returns and month-end stock per month, store and product category. Stock is the position
+    on the last day of each month (semi-additive): compare months, never add them up, which is why this table only
+    offers a monthly time grain.'
+  config:
+    meta:
+      joins:
+      - join: dim_store
+        sql_on: ${mtr_merchandising_monthly.store_key} = ${dim_store.store_key}
+      metrics:
+        gross_sales:
+          type: sum
+          sql: ${TABLE}.total_gross_sales
+          label: Gross sales (AED)
+          description: Quantity x price charged, excluding VAT, before discounts. (MetricFlow metric `gross_sales`.)
+          round: 2
+        discounts:
+          type: sum
+          sql: ${TABLE}.total_discounts
+          label: Discounts (AED)
+          description: (MetricFlow metric `discounts`.)
+          round: 2
+        sales_net_of_discounts:
+          type: sum
+          sql: ${TABLE}.total_sales_net_of_discounts
+          label: Sales net of discounts (AED)
+          description: Gross sales minus discounts, excluding VAT, before returns. (MetricFlow metric `sales_net_of_discounts`.)
+          round: 2
+        returns_value:
+          type: sum
+          sql: ${TABLE}.total_returns_value
+          label: Returns (AED)
+          description: Refunds excluding VAT, booked on the return date. (MetricFlow metric `returns_value`.)
+          round: 2
+        cogs:
+          type: sum
+          sql: ${TABLE}.total_cogs
+          label: Cost of goods sold (AED)
+          description: Quantity x unit cost valid on the sale date. (MetricFlow metric `cogs`.)
+          round: 2
+        returned_cogs:
+          type: sum
+          sql: ${TABLE}.total_returned_cogs
+          label: Returned cost of goods (AED)
+          description: (MetricFlow metric `returned_cogs`.)
+          round: 2
+        closing_stock_units:
+          type: sum
+          sql: ${TABLE}.total_closing_stock_units
+          label: Closing stock (units)
+          description: Stock on hand on the last day of the period (semi-additive). (MetricFlow metric `closing_stock_units`.)
+          round: 0
+        closing_stock_value:
+          type: sum
+          sql: ${TABLE}.total_closing_stock_value
+          label: Closing stock value at cost (AED)
+          description: (MetricFlow metric `closing_stock_value`.)
+          round: 2
+        net_revenue:
+          type: number
+          sql: ${sales_net_of_discounts} - ${returns_value}
+          label: Net revenue (AED)
+          description: Gross sales - discounts - returns, excluding VAT, in AED. Returns on the return date. (MetricFlow
+            metric `net_revenue`.)
+          round: 2
+        gross_margin:
+          type: number
+          sql: (${sales_net_of_discounts} - ${returns_value}) - (${cogs} - ${returned_cogs})
+          label: Gross margin (AED)
+          description: Net revenue - cost of goods sold (net of returned cost), cost valid on the sale date. (MetricFlow
+            metric `gross_margin`.)
+          round: 2
+        gross_margin_pct:
+          type: number
+          sql: ${gross_margin} / nullif(${net_revenue}, 0)
+          label: Gross margin %
+          description: Gross margin / net revenue, from summed parts (never an average of percentages). (MetricFlow
+            metric `gross_margin_pct`.)
+          format: percent
+          round: 1
+        units_sold:
+          type: sum
+          sql: ${TABLE}.total_units_sold
+          label: Units sold
+          description: (MetricFlow metric `units_sold`.)
+          round: 0
+        return_rate:
+          type: number
+          sql: ${returns_value} / nullif(${sales_net_of_discounts}, 0)
+          label: Return rate
+          description: Returns / (gross sales - discounts), value-based, excluding VAT. (MetricFlow metric `return_rate`.)
+          format: percent
+          round: 1
+        sell_through_rate:
+          type: number
+          sql: ${units_sold} / nullif(${units_sold} + ${closing_stock_units}, 0)
+          label: Sell-through rate
+          description: Units sold / (units sold + closing stock at period end). (MetricFlow metric `sell_through_rate`.)
+          format: percent
+          round: 1
+  data_tests:
+  - dbt_utils.unique_combination_of_columns:
+      arguments:
+        combination_of_columns:
+        - metric_month
+        - store_key
+        - category
+  columns:
+  - name: metric_month
+    description: First day of the month
+    data_tests:
+    - not_null
+    config:
+      meta:
+        dimension:
+          time_intervals:
+          - MONTH
+  - name: store_key
+    data_tests:
+    - not_null
+  - name: category
+    data_tests:
+    - not_null
+  - name: total_gross_sales
+    description: 'Before discounts, excl. VAT, AED: sum(gross_excl_vat_aed)'
+    config:
+      meta:
+        dimension:
+          hidden: true
+  - name: total_discounts
+    description: 'MetricFlow measure `discounts` from sales_lines: sum(discount_excl_vat_aed)'
+    config:
+      meta:
+        dimension:
+          hidden: true
+  - name: total_sales_net_of_discounts
+    description: 'MetricFlow measure `sales_net_of_discounts` from sales_lines: sum(net_excl_vat_aed)'
+    config:
+      meta:
+        dimension:
+          hidden: true
+  - name: total_cogs
+    description: 'MetricFlow measure `cogs` from sales_lines: sum(cogs_aed)'
+    config:
+      meta:
+        dimension:
+          hidden: true
+  - name: total_units_sold
+    description: 'MetricFlow measure `units_sold` from sales_lines: sum(quantity)'
+    config:
+      meta:
+        dimension:
+          hidden: true
+  - name: total_returns_value
+    description: 'MetricFlow measure `returns_value` from returns: sum(refund_excl_vat_aed)'
+    config:
+      meta:
+        dimension:
+          hidden: true
+  - name: total_returned_cogs
+    description: 'MetricFlow measure `returned_cogs` from returns: sum(returned_cogs_aed)'
+    config:
+      meta:
+        dimension:
+          hidden: true
+  - name: total_units_returned
+    description: 'MetricFlow measure `units_returned` from returns: sum(quantity)'
+    config:
+      meta:
+        dimension:
+          hidden: true
+  - name: total_closing_stock_units
+    description: 'MetricFlow measure `closing_stock_units` from inventory_daily: sum(qty_on_hand) (last day of each
+      month)'
+    config:
+      meta:
+        dimension:
+          hidden: true
+  - name: total_closing_stock_value
+    description: 'MetricFlow measure `closing_stock_value` from inventory_daily: sum(stock_value_at_cost_aed) (last
+      day of each month)'
+    config:
+      meta:
+        dimension:
+          hidden: true
+- name: mtr_online_orders_daily
+  description: Online orders per placed date, fulfilling store and channel (web/app), with delivery time. Averages
+    are stored as sum and count so they stay correct at any grain.
+  config:
+    meta:
+      joins:
+      - join: dim_store
+        sql_on: ${mtr_online_orders_daily.store_key} = ${dim_store.store_key}
+      - join: dim_channel
+        sql_on: ${mtr_online_orders_daily.channel_key} = ${dim_channel.channel_key}
+      - join: dim_date
+        sql_on: ${mtr_online_orders_daily.metric_date} = ${dim_date.date_day}
+      metrics:
+        online_orders:
+          type: sum
+          sql: ${TABLE}.total_orders_placed
+          label: Online orders placed
+          description: (MetricFlow metric `online_orders`.)
+          round: 0
+        average_delivery_hours__sum:
+          type: sum
+          sql: ${TABLE}.total_delivery_hours_sum
+          label: Average delivery time (hours) (total_delivery_hours_sum)
+          description: Helper for MetricFlow metric `average_delivery_hours`.
+          hidden: true
+          round: 2
+        average_delivery_hours__count:
+          type: sum
+          sql: ${TABLE}.total_delivery_hours_count
+          label: Average delivery time (hours) (total_delivery_hours_count)
+          description: Helper for MetricFlow metric `average_delivery_hours`.
+          hidden: true
+          round: 2
+        average_delivery_hours:
+          type: number
+          sql: ${average_delivery_hours__sum} / nullif(${average_delivery_hours__count}, 0)
+          label: Average delivery time (hours)
+          description: Average hours from placing to delivery, for delivered orders, by placed date. (MetricFlow
+            metric `average_delivery_hours`.)
+          round: 1
+  data_tests:
+  - dbt_utils.unique_combination_of_columns:
+      arguments:
+        combination_of_columns:
+        - metric_date
+        - store_key
+        - channel_key
+  columns:
+  - name: metric_date
+    description: Business date (day grain)
+    data_tests:
+    - not_null
+  - name: store_key
+    data_tests:
+    - not_null
+  - name: channel_key
+    data_tests:
+    - not_null
+  - name: total_orders_placed
+    description: 'MetricFlow measure `orders_placed` from online_orders: count(order_key)'
+    config:
+      meta:
+        dimension:
+          hidden: true
+  - name: total_delivery_hours_sum
+    description: 'MetricFlow measure `delivery_hours` from online_orders: sum(hours_placed_to_delivered)'
+    config:
+      meta:
+        dimension:
+          hidden: true
+  - name: total_delivery_hours_count
+    description: 'MetricFlow measure `delivery_hours` from online_orders: count(hours_placed_to_delivered)'
     config:
       meta:
         dimension:

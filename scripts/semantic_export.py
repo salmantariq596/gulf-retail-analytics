@@ -42,16 +42,17 @@ ADDITIVE_DISTINCT = {"transaction_count"}
 
 
 @dataclass(frozen=True)
-class Source:
-    semantic_model: str
-    dims: dict[str, str]  # export column -> SQL expression on the fact table
-
-
-@dataclass(frozen=True)
 class Lookup:
     ref: str
     key: str
     columns: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class Source:
+    semantic_model: str
+    dims: dict[str, str]  # export column -> SQL expression on the fact table
+    enrich: tuple[Lookup, ...] = ()  # dimension columns joined onto the fact before aggregating
 
 
 @dataclass(frozen=True)
@@ -84,6 +85,9 @@ def col(measure: str) -> str:
 
 STORE_DIMS = {"store_key": "store_key", "channel_key": "channel_key", "country_code": "country_code"}
 MARKETING_DIMS = {"marketing_channel": "acquisition_channel", "country_code": "country_code"}
+CATEGORY_DIMS = {"store_key": "store_key", "category": "category"}
+PRODUCT_CATEGORY = (Lookup("dim_product", "product_key", ("category",)),)
+STORE_JOINS = (("dim_store", "store_key", "store_key"), ("dim_channel", "channel_key", "channel_key"))
 
 EXPORTS = (
     Export(
@@ -101,11 +105,39 @@ EXPORTS = (
             "units_sold", "transaction_count", "returns_value", "returned_cogs", "vat_on_returns",
             "units_returned",
         ),
-        joins=(
-            ("dim_store", "store_key", "store_key"),
-            ("dim_channel", "channel_key", "channel_key"),
-            ("dim_date", "metric_date", "date_day"),
+        joins=(*STORE_JOINS, ("dim_date", "metric_date", "date_day")),
+    ),
+    Export(
+        name="mtr_merchandising_monthly",
+        description=(
+            "Sales, returns and month-end stock per month, store and product category. Stock is "
+            "the position on the last day of each month (semi-additive): compare months, never "
+            "add them up, which is why this table only offers a monthly time grain."
         ),
+        grain="month",
+        dims=("store_key", "category"),
+        sources=(
+            Source("sales_lines", CATEGORY_DIMS, PRODUCT_CATEGORY),
+            Source("returns", CATEGORY_DIMS, PRODUCT_CATEGORY),
+            Source("inventory_daily", CATEGORY_DIMS, PRODUCT_CATEGORY),
+        ),
+        measures=(
+            "gross_sales", "discounts", "sales_net_of_discounts", "cogs", "units_sold",
+            "returns_value", "returned_cogs", "units_returned", "closing_stock_units", "closing_stock_value",
+        ),
+        joins=(("dim_store", "store_key", "store_key"),),
+    ),
+    Export(
+        name="mtr_online_orders_daily",
+        description=(
+            "Online orders per placed date, fulfilling store and channel (web/app), with delivery "
+            "time. Averages are stored as sum and count so they stay correct at any grain."
+        ),
+        grain="day",
+        dims=("store_key", "channel_key"),
+        sources=(Source("online_orders", {"store_key": "store_key", "channel_key": "channel_key"}),),
+        measures=("orders_placed", "delivery_hours"),
+        joins=(*STORE_JOINS, ("dim_date", "metric_date", "date_day")),
     ),
     Export(
         name="mtr_marketing_monthly",
@@ -164,19 +196,35 @@ class SemanticLayer:
         dim = next(d for d in sm["dimensions"] if d["name"] == name)
         return dim.get("expr", name)
 
-    def measure_sql(self, name: str) -> str:
-        _, measure = self.measures[name]
+    def is_semi_additive(self, name: str) -> bool:
+        return bool(self.measures[name][1].get("non_additive_dimension"))
+
+    def measure_parts(self, name: str, grain: str) -> list[tuple[str, str]]:
+        """(column, aggregate SQL) pairs that store a measure additively at the export grain."""
+        model, measure = self.measures[name]
         expr = str(measure.get("expr", name))
         agg = measure["agg"]
-        if measure.get("non_additive_dimension"):
-            raise Unsupported(f"measure {name} is semi-additive")
+        nad = measure.get("non_additive_dimension")
+        if nad:
+            # Month-end exports only: the source keeps just the last day of each month (see
+            # render_sql), which is what MetricFlow's window_choice: max does per month.
+            time_dim = self.models[model]["defaults"]["agg_time_dimension"]
+            if grain != "month" or agg != "sum" or nad["name"] != time_dim or nad.get("window_choice", "max") != "max":
+                raise Unsupported(f"measure {name} is semi-additive (month-end exports only)")
+            return [(col(name), f"sum({expr})")]
         if agg == "sum":
-            return f"sum({expr})"
+            return [(col(name), f"sum({expr})")]
         if agg == "count":
-            return f"count({expr})"
+            return [(col(name), f"count({expr})")]
         if agg == "count_distinct" and name in ADDITIVE_DISTINCT:
-            return f"count(distinct {expr})"
+            return [(col(name), f"count(distinct {expr})")]
+        if agg == "average":
+            # avg = sum / count of non-null values, both additive
+            return [(f"{col(name)}_sum", f"sum({expr})"), (f"{col(name)}_count", f"count({expr})")]
         raise Unsupported(f"measure {name} ({agg}) is not additive across the export grain")
+
+    def export_columns(self, export: Export) -> list[str]:
+        return [c for m in export.measures for c, _ in self.measure_parts(m, export.grain)]
 
 
 def metric_measure(metric: dict) -> str:
@@ -189,35 +237,61 @@ def render_sql(export: Export, layer: SemanticLayer) -> str:
     time_col = export.time_column
     ctes: list[str] = []
     branches: list[str] = []
+    all_cols = layer.export_columns(export)
     for source in export.sources:
         model = source.semantic_model
         missing = set(export.dims) - set(source.dims)
         if missing:
             raise ValueError(f"{export.name}: source {model} lacks dims {sorted(missing)}")
         own = [m for m in export.measures if layer.measures.get(m, ("",))[0] == model]
-        time_expr = layer.time_expr(model)
+        semi = [m for m in own if layer.is_semi_additive(m)]
+        if semi and len(semi) != len(own):
+            raise ValueError(f"{export.name}: source {model} mixes semi-additive and additive measures")
+        fact_ref = f"{{{{ ref('{layer.ref_name(model)}') }}}}"
+        relation = fact_ref
+        if source.enrich:
+            sel = ["facts.*"] + [f"{lk.ref}.{c}" for lk in source.enrich for c in lk.columns]
+            joins = [f"    inner join {{{{ ref('{lk.ref}') }}}} as {lk.ref} on facts.{lk.key} = {lk.ref}.{lk.key}"
+                     for lk in source.enrich]
+            ctes.append(
+                f"{model}_enriched as (\n    select\n"
+                + ",\n".join(f"        {s}" for s in sel)
+                + f"\n    from {fact_ref} as facts\n" + "\n".join(joins) + "\n)"
+            )
+            relation = f"{model}_enriched"
+        raw_time = layer.time_expr(model)
+        time_expr = raw_time
         if export.grain == "month":
-            time_expr = f"cast({{{{ dbt.date_trunc('month', '{time_expr}') }}}} as date)"
+            time_expr = f"cast({{{{ dbt.date_trunc('month', '{raw_time}') }}}} as date)"
+        if semi:
+            # levels, not flows: keep only the last day of each month
+            ctes.append(
+                f"{model}_month_end as (\n    select src.*\n    from {relation} as src\n"
+                f"    where src.{raw_time} in (\n            select max(f.{raw_time})\n"
+                f"            from {fact_ref} as f\n"
+                f"            group by {{{{ dbt.date_trunc('month', 'f.{raw_time}') }}}}\n        )\n)"
+            )
+            relation = f"{model}_month_end"
         keys = [time_expr] + [source.dims[d] for d in export.dims]
+        own_parts = [p for m in own for p in layer.measure_parts(m, export.grain)]
         select = [f"{time_expr} as {time_col}"]
         select += [expr if expr == d else f"{expr} as {d}" for d, expr in zip(export.dims, keys[1:])]
-        select += [f"{layer.measure_sql(m)} as {col(m)}" for m in own]
+        select += [f"{sql} as {c}" for c, sql in own_parts]
         ctes.append(
             f"{model} as (\n    select\n"
             + ",\n".join(f"        {s}" for s in select)
-            + f"\n    from {{{{ ref('{layer.ref_name(model)}') }}}}\n    group by\n"
+            + f"\n    from {relation}\n    group by\n"
             + ",\n".join(f"        {k}" for k in keys)
             + "\n)"
         )
-        cols = [time_col, *export.dims] + [col(m) if m in own else f"0 as {col(m)}" for m in export.measures]
+        own_cols = {c for c, _ in own_parts}
+        cols = [time_col, *export.dims] + [c if c in own_cols else f"0 as {c}" for c in all_cols]
         branches.append("    select\n" + ",\n".join(f"        {c}" for c in cols) + f"\n    from {model}")
 
-    for source_model in {s.semantic_model for s in export.sources}:
-        layer.ref_name(source_model)  # validate early
     ctes.append("unioned as (\n" + "\n    union all\n".join(branches) + "\n)")
 
     group = [time_col, *export.dims]
-    agg = [f"        coalesce(sum({col(m)}), 0) as {col(m)}" for m in export.measures]
+    agg = [f"        coalesce(sum({c}), 0) as {c}" for c in all_cols]
     ctes.append(
         "aggregated as (\n    select\n"
         + ",\n".join([f"        {g}" for g in group] + agg)
@@ -232,7 +306,7 @@ def render_sql(export: Export, layer: SemanticLayer) -> str:
             ctes.append(f"{lk.ref} as (\n    select * from {{{{ ref('{lk.ref}') }}}}\n)")
             joins.append(f"    left join {lk.ref} on aggregated.{lk.key} = {lk.ref}.{lk.key}")
             lookup_cols += [f"{lk.ref}.{c}" for c in lk.columns]
-        cols = [f"aggregated.{c}" for c in group] + lookup_cols + [f"aggregated.{col(m)}" for m in export.measures]
+        cols = [f"aggregated.{c}" for c in group] + lookup_cols + [f"aggregated.{c}" for c in all_cols]
         ctes.append(
             "final as (\n    select\n"
             + ",\n".join(f"        {c}" for c in cols)
@@ -273,10 +347,16 @@ class Translator:
             raise Unsupported(f"unknown metric {name}")
         return self.layer.metrics[name]
 
-    def _column(self, measure: str) -> str:
+    def _parts(self, measure: str) -> list[tuple[str, str]]:
         if measure not in self.export.measures:
             raise Unsupported(f"measure {measure} is not in {self.export.name}")
-        return f"${{TABLE}}.{col(measure)}"
+        return self.layer.measure_parts(measure, self.export.grain)
+
+    def _column(self, measure: str) -> str:
+        parts = self._parts(measure)
+        if len(parts) != 1:
+            raise Unsupported(f"measure {measure} cannot be filtered here")
+        return f"${{TABLE}}.{parts[0][0]}"
 
     def _filter_sql(self, flt: str) -> str:
         def repl(match: re.Match) -> str:
@@ -310,15 +390,29 @@ class Translator:
         kind = metric["type"]
         if kind == "simple":
             measure = metric_measure(metric)
-            self.layer.measure_sql(measure)  # raises if not additive
-            body = {"type": "sum", "sql": self._column(measure)}
+            parts = self._parts(measure)  # raises if the measure cannot be stored additively
+            if len(parts) == 1:
+                body = {"type": "sum", "sql": f"${{TABLE}}.{parts[0][0]}"}
+            else:  # average: hidden sum and count metrics, divided
+                refs = []
+                for column, _ in parts:
+                    helper = f"{name}__{column.rsplit('_', 1)[1]}"
+                    self.out[helper] = {
+                        "type": "sum", "sql": f"${{TABLE}}.{column}", "label": f"{metric.get('label', name)} ({column})",
+                        "description": f"Helper for MetricFlow metric `{name}`.", "hidden": True, "round": 2,
+                    }
+                    refs.append(f"${{{helper}}}")
+                body = {"type": "number", "sql": f"{refs[0]} / nullif({refs[1]}, 0)"}
         elif kind == "derived":
             body = {"type": "number", "sql": self._derived(metric, None)}
         elif kind == "ratio":
             body = {"type": "number", "sql": self._ratio(metric, None)}
         else:
             raise Unsupported(f"{kind} metrics have no pre-aggregated equivalent")
-        self.out[name] = {**body, **self._describe(metric), "hidden": True}
+        entry = {**body, **self._describe(metric), "hidden": True}
+        if body["type"] == "number" and entry.get("round") == 0:
+            entry["round"] = 1  # averages of counts/hours
+        self.out[name] = entry
         return f"${{{name}}}"
 
     def _input(self, name: str, flt: str | None) -> str:
@@ -410,21 +504,27 @@ def render_yaml(layer: SemanticLayer) -> str:
                 for model, local, remote in export.joins
             ]
         meta["metrics"] = metrics
-        columns: list[dict] = [{
+        time_col: dict = {
             "name": export.time_column,
             "description": "Business date (day grain)" if export.grain == "day" else "First day of the month",
             "data_tests": ["not_null"],
-        }]
+        }
+        if any(layer.is_semi_additive(m) for m in export.measures):
+            # month-end stock must not be summed into quarters or years
+            time_col["config"] = {"meta": {"dimension": {"time_intervals": ["MONTH"]}}}
+        columns: list[dict] = [time_col]
         columns += [{"name": d, "data_tests": ["not_null"]} for d in export.dims]
         columns += [{"name": c} for lk in export.lookups for c in lk.columns]
         for measure in export.measures:
             model, spec = layer.measures[measure]
             desc = spec.get("description") or f"MetricFlow measure `{measure}` from {model}"
-            columns.append({
-                "name": col(measure),
-                "description": f"{desc}: {spec['agg']}({spec.get('expr', measure)})",
-                "config": {"meta": {"dimension": {"hidden": True}}},
-            })
+            for column, sql in layer.measure_parts(measure, export.grain):
+                note = " (last day of each month)" if layer.is_semi_additive(measure) else ""
+                columns.append({
+                    "name": column,
+                    "description": f"{desc}: {sql.replace(spec.get('expr', measure), str(spec.get('expr', measure)))}{note}",
+                    "config": {"meta": {"dimension": {"hidden": True}}},
+                })
         models.append({
             "name": export.name,
             "description": export.description,

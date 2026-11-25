@@ -9,27 +9,27 @@ MetricFlow only, for the reason given.
 
 | Metric | Label | Type | Lightdash explore |
 | --- | --- | --- | --- |
-| `gross_sales` | Gross sales (AED) | simple | `mtr_sales_daily` |
-| `discounts` | Discounts (AED) | simple | `mtr_sales_daily` |
-| `sales_net_of_discounts` | Sales net of discounts (AED) | simple | `mtr_sales_daily` |
-| `returns_value` | Returns (AED) | simple | `mtr_sales_daily` |
-| `cogs` | Cost of goods sold (AED) | simple | `mtr_sales_daily` |
-| `returned_cogs` | Returned cost of goods (AED) | simple | `mtr_sales_daily` |
+| `gross_sales` | Gross sales (AED) | simple | `mtr_sales_daily`, `mtr_merchandising_monthly` |
+| `discounts` | Discounts (AED) | simple | `mtr_sales_daily`, `mtr_merchandising_monthly` |
+| `sales_net_of_discounts` | Sales net of discounts (AED) | simple | `mtr_sales_daily`, `mtr_merchandising_monthly` |
+| `returns_value` | Returns (AED) | simple | `mtr_sales_daily`, `mtr_merchandising_monthly` |
+| `cogs` | Cost of goods sold (AED) | simple | `mtr_sales_daily`, `mtr_merchandising_monthly` |
+| `returned_cogs` | Returned cost of goods (AED) | simple | `mtr_sales_daily`, `mtr_merchandising_monthly` |
 | `transactions` | Transactions | simple | `mtr_sales_daily` |
 | `ad_spend` | Marketing spend (AED) | simple | `mtr_marketing_monthly` |
-| `closing_stock_units` | Closing stock (units) | simple | MetricFlow only: measure closing_stock_units is semi-additive |
-| `closing_stock_value` | Closing stock value at cost (AED) | simple | MetricFlow only: measure closing_stock_value is semi-additive |
-| `online_orders` | Online orders placed | simple | MetricFlow only: measure orders_placed is not in mtr_sales_daily |
+| `closing_stock_units` | Closing stock (units) | simple | `mtr_merchandising_monthly` |
+| `closing_stock_value` | Closing stock value at cost (AED) | simple | `mtr_merchandising_monthly` |
+| `online_orders` | Online orders placed | simple | `mtr_online_orders_daily` |
 | `vat_collected` | VAT collected (AED) | derived | `mtr_sales_daily` |
 | `vat_on_sales_metric` | VAT on sales (AED) | simple | `mtr_sales_daily` |
 | `vat_on_returns_metric` | VAT on returns (AED) | simple | `mtr_sales_daily` |
-| `net_revenue` | Net revenue (AED) | derived | `mtr_sales_daily`, `mtr_marketing_monthly` |
-| `gross_margin` | Gross margin (AED) | derived | `mtr_sales_daily` |
-| `gross_margin_pct` | Gross margin % | derived | `mtr_sales_daily` |
-| `units_sold` | Units sold | simple | `mtr_sales_daily` |
+| `net_revenue` | Net revenue (AED) | derived | `mtr_sales_daily`, `mtr_merchandising_monthly`, `mtr_marketing_monthly` |
+| `gross_margin` | Gross margin (AED) | derived | `mtr_sales_daily`, `mtr_merchandising_monthly` |
+| `gross_margin_pct` | Gross margin % | derived | `mtr_sales_daily`, `mtr_merchandising_monthly` |
+| `units_sold` | Units sold | simple | `mtr_sales_daily`, `mtr_merchandising_monthly` |
 | `average_basket_value` | Average basket value (AED) | ratio | `mtr_sales_daily` |
-| `return_rate` | Return rate | ratio | `mtr_sales_daily` |
+| `return_rate` | Return rate | ratio | `mtr_sales_daily`, `mtr_merchandising_monthly` |
 | `active_customers` | Active customers (90 days) | cumulative | MetricFlow only: cumulative metrics have no pre-aggregated equivalent |
-| `sell_through_rate` | Sell-through rate | derived | MetricFlow only: measure closing_stock_units is semi-additive |
+| `sell_through_rate` | Sell-through rate | derived | `mtr_merchandising_monthly` |
 | `roas` | ROAS (first-touch) | derived | `mtr_marketing_monthly` |
-| `average_delivery_hours` | Average delivery time (hours) | simple | MetricFlow only: measure delivery_hours (average) is not additive across the export grain |
+| `average_delivery_hours` | Average delivery time (hours) | simple | `mtr_online_orders_daily` |
