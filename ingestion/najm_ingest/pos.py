@@ -32,8 +32,13 @@ def pos_source(credentials: str | None = None):
     for table, (cursor, pk, disposition) in TABLES.items():
         res = sql_table(
             credentials=creds, schema="pos", table=table,
-            incremental=dlt.sources.incremental(cursor),
+            # rows equal to the last cursor value are re-read and dropped by primary key
+            # (without it dlt hashes whole rows, which changes when the reflected schema does)
+            incremental=dlt.sources.incremental(cursor, primary_key=pk),
             backend="pyarrow", chunk_size=50_000,
+            # reflect the table when extracting, not when the source is built: Dagster
+            # builds sources at load time and must not need Postgres to start
+            defer_table_reflect=True,
         )
         res.apply_hints(primary_key=pk, write_disposition=disposition)
         yield res

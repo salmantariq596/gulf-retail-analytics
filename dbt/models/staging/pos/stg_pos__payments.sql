@@ -2,6 +2,8 @@ with
 
 source as (
     select * from {{ source('pos', 'payments') }}
+    -- loads are at-least-once: drop a row re-delivered at an incremental boundary
+    qualify row_number() over (partition by payment_id order by payment_id) = 1
 ),
 
 renamed as (

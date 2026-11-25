@@ -34,7 +34,7 @@ Marketing CSV ──┘          DuckDB (dev) · Snowflake (prod) · orchestrate
 - [x] **Phase 3** — Snapshots, intermediate models, dimensions with contracts *(2 snapshots, 8 intermediate models, 7 contracted dimensions)*
 - [x] **Phase 4** — Fact tables, incremental models, 100+ tests *(5 facts + 1 report, 275 data tests + 4 unit tests)*
 - [ ] **Phase 5** — Snowflake: RBAC, warehouses, prod build *(RBAC, key-pair service users and PROD build done; full 3-year load pending)*
-- [ ] **Phase 6** — MetricFlow metrics, Lightdash dashboards, Dagster *(25 metrics, 4 generated metric tables, 3 dashboards as code, exposures; Dagster pending)*
+- [ ] **Phase 6** — MetricFlow metrics, Lightdash dashboards, Dagster *(25 metrics, 4 generated metric tables, 3 dashboards as code, exposures, Dagster daily job)*
 - [ ] **Phase 7** — CI/CD, docs site, launch
 
 ## Run locally
@@ -56,6 +56,28 @@ najm-gen run --days 1 && najm-ingest all
 
 # 4. Transform and test with dbt (DuckDB)
 cd dbt && dbt deps && dbt source freshness && dbt build
+```
+
+## Orchestration (Dagster)
+
+One asset graph runs from the source systems to the governed metrics
+([orchestration/najm_orchestration/definitions.py](orchestration/najm_orchestration/definitions.py)):
+
+```
+source_systems_day ─► pos/* online/* erp/* catalog/* marketing/*  (dlt, one asset per raw table)
+                   ─► dbt seeds, snapshots, staging ─► intermediate ─► marts  (286 tests as asset checks)
+                   ─► metricflow_reconciliation  (Lightdash metrics == mf query)
+```
+
+- **Lineage:** dlt tables are keyed like the dbt sources (`pos/sales`), so lineage is unbroken from Postgres, the API and the files through to the dashboards' tables.
+- **Freshness gate:** `dbt source freshness` runs before `dbt build`, so stale raw data stops the run instead of publishing old numbers.
+- **Schedule:** the `daily_refresh` job runs at 06:00 Asia/Dubai. The schedule ships switched off; turn it on in the UI.
+
+```powershell
+$env:DAGSTER_HOME = "$PWD\data\dagster_home"
+dagster dev                                   # UI on http://localhost:3000
+dagster job execute -m najm_orchestration.definitions -j daily_refresh
+# against Snowflake: $env:DBT_TARGET = "prod"; $env:NAJM_WAREHOUSE = "snowflake"
 ```
 
 ## Metrics and dashboards
