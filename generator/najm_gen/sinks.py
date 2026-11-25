@@ -22,6 +22,7 @@ class PostgresSink:
         self._ensure_database(dsn)
         self.conn = psycopg.connect(dsn)
         self._ensure_schema()
+        self._ensure_progress_table()
 
     @staticmethod
     def _ensure_database(dsn: str) -> None:
@@ -39,9 +40,30 @@ class PostgresSink:
             self.conn.execute(C.POS_SCHEMA_SQL.read_text(encoding="utf-8"))
             self.conn.commit()
 
+    def _ensure_progress_table(self) -> None:
+        """Generator bookkeeping, outside the pos schema so ingestion never sees it."""
+        self.conn.execute("create schema if not exists gen_meta")
+        self.conn.execute(
+            "create table if not exists gen_meta.progress ("
+            " id int primary key default 1 check (id = 1), next_day date not null)"
+        )
+        self.conn.commit()
+
+    def set_progress(self, next_day) -> None:
+        """Record the next day to simulate. Not committed here: it commits together with
+        the day's data, so the marker and the data can never disagree."""
+        self.conn.execute(
+            "insert into gen_meta.progress (id, next_day) values (1, %s) "
+            "on conflict (id) do update set next_day = excluded.next_day", (next_day,))
+
+    def get_progress(self):
+        row = self.conn.execute("select next_day from gen_meta.progress where id = 1").fetchone()
+        return row[0] if row else None
+
     def reset(self) -> None:
         with self.conn.cursor() as cur:
             cur.execute("TRUNCATE " + ", ".join(f"pos.{t}" for t in POS_TABLES) + " RESTART IDENTITY CASCADE")
+            cur.execute("delete from gen_meta.progress")
         self.conn.commit()
 
     def copy(self, table: str, df: pd.DataFrame, columns: list[str]) -> None:
