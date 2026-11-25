@@ -7,7 +7,7 @@ sales_lines as (
         cast({{ dbt.date_trunc('month', 'business_date') }} as date) as metric_month,
         acquisition_channel as marketing_channel,
         country_code,
-        sum(net_excl_vat_aed) as sales_net_of_discounts
+        sum(net_excl_vat_aed) as total_sales_net_of_discounts
     from {{ ref('fct_sales_lines') }}
     group by
         cast({{ dbt.date_trunc('month', 'business_date') }} as date),
@@ -20,7 +20,7 @@ returns as (
         cast({{ dbt.date_trunc('month', 'return_date') }} as date) as metric_month,
         acquisition_channel as marketing_channel,
         country_code,
-        sum(refund_excl_vat_aed) as returns_value
+        sum(refund_excl_vat_aed) as total_returns_value
     from {{ ref('fct_returns') }}
     group by
         cast({{ dbt.date_trunc('month', 'return_date') }} as date),
@@ -33,9 +33,9 @@ marketing_spend as (
         cast({{ dbt.date_trunc('month', 'spend_date') }} as date) as metric_month,
         marketing_channel,
         country_code,
-        sum(spend_aed) as spend,
-        sum(clicks) as clicks,
-        sum(impressions) as impressions
+        sum(spend_aed) as total_spend,
+        sum(clicks) as total_clicks,
+        sum(impressions) as total_impressions
     from {{ ref('fct_marketing_spend') }}
     group by
         cast({{ dbt.date_trunc('month', 'spend_date') }} as date),
@@ -48,33 +48,33 @@ unioned as (
         metric_month,
         marketing_channel,
         country_code,
-        sales_net_of_discounts,
-        0 as returns_value,
-        0 as spend,
-        0 as clicks,
-        0 as impressions
+        total_sales_net_of_discounts,
+        0 as total_returns_value,
+        0 as total_spend,
+        0 as total_clicks,
+        0 as total_impressions
     from sales_lines
     union all
     select
         metric_month,
         marketing_channel,
         country_code,
-        0 as sales_net_of_discounts,
-        returns_value,
-        0 as spend,
-        0 as clicks,
-        0 as impressions
+        0 as total_sales_net_of_discounts,
+        total_returns_value,
+        0 as total_spend,
+        0 as total_clicks,
+        0 as total_impressions
     from returns
     union all
     select
         metric_month,
         marketing_channel,
         country_code,
-        0 as sales_net_of_discounts,
-        0 as returns_value,
-        spend,
-        clicks,
-        impressions
+        0 as total_sales_net_of_discounts,
+        0 as total_returns_value,
+        total_spend,
+        total_clicks,
+        total_impressions
     from marketing_spend
 ),
 
@@ -83,11 +83,11 @@ aggregated as (
         metric_month,
         marketing_channel,
         country_code,
-        coalesce(sum(sales_net_of_discounts), 0) as sales_net_of_discounts,
-        coalesce(sum(returns_value), 0) as returns_value,
-        coalesce(sum(spend), 0) as spend,
-        coalesce(sum(clicks), 0) as clicks,
-        coalesce(sum(impressions), 0) as impressions
+        coalesce(sum(total_sales_net_of_discounts), 0) as total_sales_net_of_discounts,
+        coalesce(sum(total_returns_value), 0) as total_returns_value,
+        coalesce(sum(total_spend), 0) as total_spend,
+        coalesce(sum(total_clicks), 0) as total_clicks,
+        coalesce(sum(total_impressions), 0) as total_impressions
     from unioned
     group by
         metric_month,
@@ -107,11 +107,11 @@ final as (
         marketing_channels.channel_name,
         marketing_channels.channel_type,
         marketing_channels.is_paid,
-        aggregated.sales_net_of_discounts,
-        aggregated.returns_value,
-        aggregated.spend,
-        aggregated.clicks,
-        aggregated.impressions
+        aggregated.total_sales_net_of_discounts,
+        aggregated.total_returns_value,
+        aggregated.total_spend,
+        aggregated.total_clicks,
+        aggregated.total_impressions
     from aggregated
     left join marketing_channels on aggregated.marketing_channel = marketing_channels.marketing_channel
 )

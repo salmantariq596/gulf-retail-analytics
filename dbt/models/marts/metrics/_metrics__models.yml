@@ -18,55 +18,55 @@ models:
       metrics:
         gross_sales:
           type: sum
-          sql: ${TABLE}.gross_sales
+          sql: ${TABLE}.total_gross_sales
           label: Gross sales (AED)
           description: Quantity x price charged, excluding VAT, before discounts. (MetricFlow metric `gross_sales`.)
           round: 2
         discounts:
           type: sum
-          sql: ${TABLE}.discounts
+          sql: ${TABLE}.total_discounts
           label: Discounts (AED)
           description: (MetricFlow metric `discounts`.)
           round: 2
         sales_net_of_discounts:
           type: sum
-          sql: ${TABLE}.sales_net_of_discounts
+          sql: ${TABLE}.total_sales_net_of_discounts
           label: Sales net of discounts (AED)
           description: Gross sales minus discounts, excluding VAT, before returns. (MetricFlow metric `sales_net_of_discounts`.)
           round: 2
         returns_value:
           type: sum
-          sql: ${TABLE}.returns_value
+          sql: ${TABLE}.total_returns_value
           label: Returns (AED)
           description: Refunds excluding VAT, booked on the return date. (MetricFlow metric `returns_value`.)
           round: 2
         cogs:
           type: sum
-          sql: ${TABLE}.cogs
+          sql: ${TABLE}.total_cogs
           label: Cost of goods sold (AED)
           description: Quantity x unit cost valid on the sale date. (MetricFlow metric `cogs`.)
           round: 2
         returned_cogs:
           type: sum
-          sql: ${TABLE}.returned_cogs
+          sql: ${TABLE}.total_returned_cogs
           label: Returned cost of goods (AED)
           description: (MetricFlow metric `returned_cogs`.)
           round: 2
         transactions:
           type: sum
-          sql: ${TABLE}.transaction_count
+          sql: ${TABLE}.total_transaction_count
           label: Transactions
           description: Distinct POS receipts plus online orders. (MetricFlow metric `transactions`.)
           round: 0
         vat_on_sales_metric:
           type: sum
-          sql: ${TABLE}.vat_on_sales
+          sql: ${TABLE}.total_vat_on_sales
           label: VAT on sales (AED)
           description: (MetricFlow metric `vat_on_sales_metric`.)
           round: 2
         vat_on_returns_metric:
           type: sum
-          sql: ${TABLE}.vat_on_returns
+          sql: ${TABLE}.total_vat_on_returns
           label: VAT on returns (AED)
           description: (MetricFlow metric `vat_on_returns_metric`.)
           round: 2
@@ -100,7 +100,7 @@ models:
           round: 1
         units_sold:
           type: sum
-          sql: ${TABLE}.units_sold
+          sql: ${TABLE}.total_units_sold
           label: Units sold
           description: (MetricFlow metric `units_sold`.)
           round: 0
@@ -140,68 +140,68 @@ models:
   - name: country_code
     data_tests:
     - not_null
-  - name: gross_sales
+  - name: total_gross_sales
     description: 'Before discounts, excl. VAT, AED: sum(gross_excl_vat_aed)'
     config:
       meta:
         dimension:
           hidden: true
-  - name: discounts
+  - name: total_discounts
     description: 'MetricFlow measure `discounts` from sales_lines: sum(discount_excl_vat_aed)'
     config:
       meta:
         dimension:
           hidden: true
-  - name: sales_net_of_discounts
+  - name: total_sales_net_of_discounts
     description: 'MetricFlow measure `sales_net_of_discounts` from sales_lines: sum(net_excl_vat_aed)'
     config:
       meta:
         dimension:
           hidden: true
-  - name: cogs
+  - name: total_cogs
     description: 'MetricFlow measure `cogs` from sales_lines: sum(cogs_aed)'
     config:
       meta:
         dimension:
           hidden: true
-  - name: vat_on_sales
+  - name: total_vat_on_sales
     description: 'MetricFlow measure `vat_on_sales` from sales_lines: sum(vat_aed)'
     config:
       meta:
         dimension:
           hidden: true
-  - name: units_sold
+  - name: total_units_sold
     description: 'MetricFlow measure `units_sold` from sales_lines: sum(quantity)'
     config:
       meta:
         dimension:
           hidden: true
-  - name: transaction_count
+  - name: total_transaction_count
     description: 'MetricFlow measure `transaction_count` from sales_lines: count_distinct(source_system || ''-''
       || transaction_id)'
     config:
       meta:
         dimension:
           hidden: true
-  - name: returns_value
+  - name: total_returns_value
     description: 'MetricFlow measure `returns_value` from returns: sum(refund_excl_vat_aed)'
     config:
       meta:
         dimension:
           hidden: true
-  - name: returned_cogs
+  - name: total_returned_cogs
     description: 'MetricFlow measure `returned_cogs` from returns: sum(returned_cogs_aed)'
     config:
       meta:
         dimension:
           hidden: true
-  - name: vat_on_returns
+  - name: total_vat_on_returns
     description: 'MetricFlow measure `vat_on_returns` from returns: sum(refund_vat_aed)'
     config:
       meta:
         dimension:
           hidden: true
-  - name: units_returned
+  - name: total_units_returned
     description: 'MetricFlow measure `units_returned` from returns: sum(quantity)'
     config:
       meta:
@@ -215,7 +215,7 @@ models:
       metrics:
         sales_net_of_discounts__is_paid_true:
           type: sum
-          sql: case when ${TABLE}.is_paid = true then ${TABLE}.sales_net_of_discounts end
+          sql: case when ${TABLE}.is_paid = true then ${TABLE}.total_sales_net_of_discounts end
           label: Sales net of discounts (AED) where is_paid_true
           description: 'Helper: MetricFlow metric `sales_net_of_discounts` filtered on {{ Dimension(''marketing_channel__is_paid'')
             }} = true.'
@@ -223,7 +223,7 @@ models:
           round: 2
         returns_value__is_paid_true:
           type: sum
-          sql: case when ${TABLE}.is_paid = true then ${TABLE}.returns_value end
+          sql: case when ${TABLE}.is_paid = true then ${TABLE}.total_returns_value end
           label: Returns (AED) where is_paid_true
           description: 'Helper: MetricFlow metric `returns_value` filtered on {{ Dimension(''marketing_channel__is_paid'')
             }} = true.'
@@ -231,7 +231,7 @@ models:
           round: 2
         ad_spend:
           type: sum
-          sql: ${TABLE}.spend
+          sql: ${TABLE}.total_spend
           label: Marketing spend (AED)
           description: (MetricFlow metric `ad_spend`.)
           round: 2
@@ -246,14 +246,14 @@ models:
           round: 2
         sales_net_of_discounts:
           type: sum
-          sql: ${TABLE}.sales_net_of_discounts
+          sql: ${TABLE}.total_sales_net_of_discounts
           label: Sales net of discounts (AED)
           description: Gross sales minus discounts, excluding VAT, before returns. (MetricFlow metric `sales_net_of_discounts`.)
           round: 2
           hidden: true
         returns_value:
           type: sum
-          sql: ${TABLE}.returns_value
+          sql: ${TABLE}.total_returns_value
           label: Returns (AED)
           description: Refunds excluding VAT, booked on the return date. (MetricFlow metric `returns_value`.)
           round: 2
@@ -286,31 +286,31 @@ models:
   - name: channel_name
   - name: channel_type
   - name: is_paid
-  - name: sales_net_of_discounts
+  - name: total_sales_net_of_discounts
     description: 'MetricFlow measure `sales_net_of_discounts` from sales_lines: sum(net_excl_vat_aed)'
     config:
       meta:
         dimension:
           hidden: true
-  - name: returns_value
+  - name: total_returns_value
     description: 'MetricFlow measure `returns_value` from returns: sum(refund_excl_vat_aed)'
     config:
       meta:
         dimension:
           hidden: true
-  - name: spend
+  - name: total_spend
     description: 'MetricFlow measure `spend` from marketing_spend: sum(spend_aed)'
     config:
       meta:
         dimension:
           hidden: true
-  - name: clicks
+  - name: total_clicks
     description: 'MetricFlow measure `clicks` from marketing_spend: sum(clicks)'
     config:
       meta:
         dimension:
           hidden: true
-  - name: impressions
+  - name: total_impressions
     description: 'MetricFlow measure `impressions` from marketing_spend: sum(impressions)'
     config:
       meta:

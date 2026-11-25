@@ -73,7 +73,13 @@ class Export:
     @property
     def columns(self) -> list[str]:
         lookup_cols = [c for lk in self.lookups for c in lk.columns]
-        return [self.time_column, *self.dims, *lookup_cols, *self.measures]
+        return [self.time_column, *self.dims, *lookup_cols, *map(col, self.measures)]
+
+
+def col(measure: str) -> str:
+    """Column holding a measure in an mtr table. Prefixed, because Lightdash drops a metric
+    whose name matches a column, and metrics keep their MetricFlow names (gross_sales...)."""
+    return f"total_{measure}"
 
 
 STORE_DIMS = {"store_key": "store_key", "channel_key": "channel_key", "country_code": "country_code"}
@@ -195,7 +201,7 @@ def render_sql(export: Export, layer: SemanticLayer) -> str:
         keys = [time_expr] + [source.dims[d] for d in export.dims]
         select = [f"{time_expr} as {time_col}"]
         select += [expr if expr == d else f"{expr} as {d}" for d, expr in zip(export.dims, keys[1:])]
-        select += [f"{layer.measure_sql(m)} as {m}" for m in own]
+        select += [f"{layer.measure_sql(m)} as {col(m)}" for m in own]
         ctes.append(
             f"{model} as (\n    select\n"
             + ",\n".join(f"        {s}" for s in select)
@@ -203,7 +209,7 @@ def render_sql(export: Export, layer: SemanticLayer) -> str:
             + ",\n".join(f"        {k}" for k in keys)
             + "\n)"
         )
-        cols = [time_col, *export.dims] + [m if m in own else f"0 as {m}" for m in export.measures]
+        cols = [time_col, *export.dims] + [col(m) if m in own else f"0 as {col(m)}" for m in export.measures]
         branches.append("    select\n" + ",\n".join(f"        {c}" for c in cols) + f"\n    from {model}")
 
     for source_model in {s.semantic_model for s in export.sources}:
@@ -211,7 +217,7 @@ def render_sql(export: Export, layer: SemanticLayer) -> str:
     ctes.append("unioned as (\n" + "\n    union all\n".join(branches) + "\n)")
 
     group = [time_col, *export.dims]
-    agg = [f"        coalesce(sum({m}), 0) as {m}" for m in export.measures]
+    agg = [f"        coalesce(sum({col(m)}), 0) as {col(m)}" for m in export.measures]
     ctes.append(
         "aggregated as (\n    select\n"
         + ",\n".join([f"        {g}" for g in group] + agg)
@@ -226,7 +232,7 @@ def render_sql(export: Export, layer: SemanticLayer) -> str:
             ctes.append(f"{lk.ref} as (\n    select * from {{{{ ref('{lk.ref}') }}}}\n)")
             joins.append(f"    left join {lk.ref} on aggregated.{lk.key} = {lk.ref}.{lk.key}")
             lookup_cols += [f"{lk.ref}.{c}" for c in lk.columns]
-        cols = [f"aggregated.{c}" for c in group] + lookup_cols + [f"aggregated.{m}" for m in export.measures]
+        cols = [f"aggregated.{c}" for c in group] + lookup_cols + [f"aggregated.{col(m)}" for m in export.measures]
         ctes.append(
             "final as (\n    select\n"
             + ",\n".join(f"        {c}" for c in cols)
@@ -270,7 +276,7 @@ class Translator:
     def _column(self, measure: str) -> str:
         if measure not in self.export.measures:
             raise Unsupported(f"measure {measure} is not in {self.export.name}")
-        return f"${{TABLE}}.{measure}"
+        return f"${{TABLE}}.{col(measure)}"
 
     def _filter_sql(self, flt: str) -> str:
         def repl(match: re.Match) -> str:
@@ -415,7 +421,7 @@ def render_yaml(layer: SemanticLayer) -> str:
             model, spec = layer.measures[measure]
             desc = spec.get("description") or f"MetricFlow measure `{measure}` from {model}"
             columns.append({
-                "name": measure,
+                "name": col(measure),
                 "description": f"{desc}: {spec['agg']}({spec.get('expr', measure)})",
                 "config": {"meta": {"dimension": {"hidden": True}}},
             })

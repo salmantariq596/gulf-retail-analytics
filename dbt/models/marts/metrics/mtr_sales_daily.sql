@@ -8,13 +8,13 @@ sales_lines as (
         store_key,
         channel_key,
         country_code,
-        sum(gross_excl_vat_aed) as gross_sales,
-        sum(discount_excl_vat_aed) as discounts,
-        sum(net_excl_vat_aed) as sales_net_of_discounts,
-        sum(cogs_aed) as cogs,
-        sum(vat_aed) as vat_on_sales,
-        sum(quantity) as units_sold,
-        count(distinct source_system || '-' || transaction_id) as transaction_count
+        sum(gross_excl_vat_aed) as total_gross_sales,
+        sum(discount_excl_vat_aed) as total_discounts,
+        sum(net_excl_vat_aed) as total_sales_net_of_discounts,
+        sum(cogs_aed) as total_cogs,
+        sum(vat_aed) as total_vat_on_sales,
+        sum(quantity) as total_units_sold,
+        count(distinct source_system || '-' || transaction_id) as total_transaction_count
     from {{ ref('fct_sales_lines') }}
     group by
         business_date,
@@ -29,10 +29,10 @@ returns as (
         store_key,
         channel_key,
         country_code,
-        sum(refund_excl_vat_aed) as returns_value,
-        sum(returned_cogs_aed) as returned_cogs,
-        sum(refund_vat_aed) as vat_on_returns,
-        sum(quantity) as units_returned
+        sum(refund_excl_vat_aed) as total_returns_value,
+        sum(returned_cogs_aed) as total_returned_cogs,
+        sum(refund_vat_aed) as total_vat_on_returns,
+        sum(quantity) as total_units_returned
     from {{ ref('fct_returns') }}
     group by
         return_date,
@@ -47,17 +47,17 @@ unioned as (
         store_key,
         channel_key,
         country_code,
-        gross_sales,
-        discounts,
-        sales_net_of_discounts,
-        cogs,
-        vat_on_sales,
-        units_sold,
-        transaction_count,
-        0 as returns_value,
-        0 as returned_cogs,
-        0 as vat_on_returns,
-        0 as units_returned
+        total_gross_sales,
+        total_discounts,
+        total_sales_net_of_discounts,
+        total_cogs,
+        total_vat_on_sales,
+        total_units_sold,
+        total_transaction_count,
+        0 as total_returns_value,
+        0 as total_returned_cogs,
+        0 as total_vat_on_returns,
+        0 as total_units_returned
     from sales_lines
     union all
     select
@@ -65,17 +65,17 @@ unioned as (
         store_key,
         channel_key,
         country_code,
-        0 as gross_sales,
-        0 as discounts,
-        0 as sales_net_of_discounts,
-        0 as cogs,
-        0 as vat_on_sales,
-        0 as units_sold,
-        0 as transaction_count,
-        returns_value,
-        returned_cogs,
-        vat_on_returns,
-        units_returned
+        0 as total_gross_sales,
+        0 as total_discounts,
+        0 as total_sales_net_of_discounts,
+        0 as total_cogs,
+        0 as total_vat_on_sales,
+        0 as total_units_sold,
+        0 as total_transaction_count,
+        total_returns_value,
+        total_returned_cogs,
+        total_vat_on_returns,
+        total_units_returned
     from returns
 ),
 
@@ -85,17 +85,17 @@ aggregated as (
         store_key,
         channel_key,
         country_code,
-        coalesce(sum(gross_sales), 0) as gross_sales,
-        coalesce(sum(discounts), 0) as discounts,
-        coalesce(sum(sales_net_of_discounts), 0) as sales_net_of_discounts,
-        coalesce(sum(cogs), 0) as cogs,
-        coalesce(sum(vat_on_sales), 0) as vat_on_sales,
-        coalesce(sum(units_sold), 0) as units_sold,
-        coalesce(sum(transaction_count), 0) as transaction_count,
-        coalesce(sum(returns_value), 0) as returns_value,
-        coalesce(sum(returned_cogs), 0) as returned_cogs,
-        coalesce(sum(vat_on_returns), 0) as vat_on_returns,
-        coalesce(sum(units_returned), 0) as units_returned
+        coalesce(sum(total_gross_sales), 0) as total_gross_sales,
+        coalesce(sum(total_discounts), 0) as total_discounts,
+        coalesce(sum(total_sales_net_of_discounts), 0) as total_sales_net_of_discounts,
+        coalesce(sum(total_cogs), 0) as total_cogs,
+        coalesce(sum(total_vat_on_sales), 0) as total_vat_on_sales,
+        coalesce(sum(total_units_sold), 0) as total_units_sold,
+        coalesce(sum(total_transaction_count), 0) as total_transaction_count,
+        coalesce(sum(total_returns_value), 0) as total_returns_value,
+        coalesce(sum(total_returned_cogs), 0) as total_returned_cogs,
+        coalesce(sum(total_vat_on_returns), 0) as total_vat_on_returns,
+        coalesce(sum(total_units_returned), 0) as total_units_returned
     from unioned
     group by
         metric_date,
