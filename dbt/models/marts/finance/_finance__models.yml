@@ -87,6 +87,11 @@ models:
         data_tests:
           - relationships:
               arguments: {to: ref('fct_sales_lines'), field: sales_line_key}
+              config:
+                # slim CI samples fct_sales_lines: only check returns of sales inside the window
+                where: >-
+                  {{ "original_sale_date > current_date - " ~ var('ci_sample_days')
+                     if target.name == 'ci' else '1 = 1' }}
       - name: store_key
         data_tests:
           - not_null

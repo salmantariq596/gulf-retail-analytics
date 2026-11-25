@@ -1,3 +1,7 @@
+-- Full-history invariant: off on the sampled slim-CI target (incremental facts read only
+-- the last ci_sample_days there). It runs in the DuckDB end-to-end job and on every deploy.
+{{ config(enabled=target.name != 'ci') }}
+
 -- The two online facts must agree: a non-cancelled order's total in the accumulating
 -- snapshot equals the sum of its lines in the transaction fact. Cancelled orders
 -- must have no sales lines at all.
