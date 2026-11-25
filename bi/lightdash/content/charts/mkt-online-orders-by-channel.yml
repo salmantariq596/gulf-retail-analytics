@@ -1,0 +1,45 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: dim_channel_channel_name
+          yRef:
+            field: mtr_online_orders_daily_online_orders
+        type: bar
+        yAxisIndex: 0
+    layout:
+      flipAxes: true
+      showIncompletePeriod: false
+      xField: dim_channel_channel_name
+      yField: &id001
+      - mtr_online_orders_daily_online_orders
+  type: cartesian
+contentType: chart
+description: null
+metricQuery:
+  additionalMetrics: []
+  customDimensions: []
+  dimensions:
+  - dim_channel_channel_name
+  exploreName: mtr_online_orders_daily
+  filters: {}
+  limit: 500
+  metricOverrides: {}
+  metrics: *id001
+  sorts:
+  - descending: true
+    fieldId: mtr_online_orders_daily_online_orders
+  tableCalculations: []
+  timezone: project_timezone
+name: 'Online orders: web vs app'
+slug: mkt-online-orders-by-channel
+spaceSlug: gulf-retail
+tableConfig:
+  columnOrder:
+  - dim_channel_channel_name
+  - mtr_online_orders_daily_online_orders
+tableName: mtr_online_orders_daily
+verification: null
+version: 1

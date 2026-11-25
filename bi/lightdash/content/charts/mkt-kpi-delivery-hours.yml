@@ -1,0 +1,48 @@
+chartConfig:
+  config:
+    comparisonFormat: percentage
+    flipColors: true
+    label: Average delivery (hours)
+    selectedField: mtr_online_orders_daily_average_delivery_hours
+    showComparison: true
+  type: big_number
+contentType: chart
+description: Last completed month, change vs the month before.
+metricQuery:
+  additionalMetrics: []
+  customDimensions: []
+  dimensions:
+  - mtr_online_orders_daily_metric_date_month
+  exploreName: mtr_online_orders_daily
+  filters:
+    dimensions:
+      and:
+      - id: d2b8b6d5-5685-505f-81e5-6586535b8eb3
+        operator: inThePast
+        settings:
+          completed: true
+          unitOfTime: months
+        target:
+          fieldId: mtr_online_orders_daily_metric_date
+        values:
+        - 2
+      id: f16d6136-a682-5799-b395-196d634ffb0a
+  limit: 2
+  metricOverrides: {}
+  metrics:
+  - mtr_online_orders_daily_average_delivery_hours
+  sorts:
+  - descending: true
+    fieldId: mtr_online_orders_daily_metric_date_month
+  tableCalculations: []
+  timezone: project_timezone
+name: Average delivery (hours)
+slug: mkt-kpi-delivery-hours
+spaceSlug: gulf-retail
+tableConfig:
+  columnOrder:
+  - mtr_online_orders_daily_metric_date_month
+  - mtr_online_orders_daily_average_delivery_hours
+tableName: mtr_online_orders_daily
+verification: null
+version: 1

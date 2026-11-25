@@ -1,0 +1,57 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: mtr_merchandising_monthly_category
+          yRef:
+            field: mtr_merchandising_monthly_sell_through_rate
+        type: bar
+        yAxisIndex: 0
+    layout:
+      flipAxes: true
+      showIncompletePeriod: false
+      xField: mtr_merchandising_monthly_category
+      yField: &id001
+      - mtr_merchandising_monthly_sell_through_rate
+  type: cartesian
+contentType: chart
+description: Units sold / (units sold + stock on the last day of the month).
+metricQuery:
+  additionalMetrics: []
+  customDimensions: []
+  dimensions:
+  - mtr_merchandising_monthly_category
+  exploreName: mtr_merchandising_monthly
+  filters:
+    dimensions:
+      and:
+      - id: 0e69f030-0572-551d-947d-d589a0737970
+        operator: inThePast
+        settings:
+          completed: true
+          unitOfTime: months
+        target:
+          fieldId: mtr_merchandising_monthly_metric_month
+        values:
+        - 1
+      id: 347c9a9d-80e1-59aa-ae65-ba7aa1f71a7f
+  limit: 500
+  metricOverrides: {}
+  metrics: *id001
+  sorts:
+  - descending: true
+    fieldId: mtr_merchandising_monthly_sell_through_rate
+  tableCalculations: []
+  timezone: project_timezone
+name: Sell-through by category (last completed month)
+slug: merch-sell-through-by-category
+spaceSlug: gulf-retail
+tableConfig:
+  columnOrder:
+  - mtr_merchandising_monthly_category
+  - mtr_merchandising_monthly_sell_through_rate
+tableName: mtr_merchandising_monthly
+verification: null
+version: 1

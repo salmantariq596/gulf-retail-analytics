@@ -33,8 +33,8 @@ Marketing CSV ──┘          DuckDB (dev) · Snowflake (prod) · orchestrate
 - [x] **Phase 2** — dbt setup, sources, seeds, staging, SQLFluff *(17 staging models, 8 seeds, 137 tests, 13 freshness checks)*
 - [x] **Phase 3** — Snapshots, intermediate models, dimensions with contracts *(2 snapshots, 8 intermediate models, 7 contracted dimensions)*
 - [x] **Phase 4** — Fact tables, incremental models, 100+ tests *(5 facts + 1 report, 275 data tests + 4 unit tests)*
-- [ ] **Phase 5** — Snowflake: RBAC, warehouses, prod build
-- [ ] **Phase 6** — MetricFlow metrics, Lightdash dashboards, Dagster
+- [ ] **Phase 5** — Snowflake: RBAC, warehouses, prod build *(RBAC, key-pair service users and PROD build done; full 3-year load pending)*
+- [ ] **Phase 6** — MetricFlow metrics, Lightdash dashboards, Dagster *(25 metrics, 4 generated metric tables, 3 dashboards as code, exposures; Dagster pending)*
 - [ ] **Phase 7** — CI/CD, docs site, launch
 
 ## Run locally
@@ -57,6 +57,26 @@ najm-gen run --days 1 && najm-ingest all
 # 4. Transform and test with dbt (DuckDB)
 cd dbt && dbt deps && dbt source freshness && dbt build
 ```
+
+## Metrics and dashboards
+
+MetricFlow (`dbt/models/semantic/`) is the single definition of every metric. Open-source
+Lightdash cannot query MetricFlow, so the BI layer is **generated** from it and **proved equal** to it:
+
+```powershell
+python scripts/semantic_export.py      # MetricFlow YAML -> mtr_* tables + Lightdash metrics + docs/metrics_catalog.md
+cd dbt; dbt build -s path:models/marts/metrics; cd ..
+python scripts/reconcile_metrics.py    # every exported metric vs `mf query`, month by month
+
+.\bi\lightdash\up.ps1                  # Lightdash on http://localhost:8080 (login in bi/lightdash/.env)
+.\bi\lightdash\deploy.ps1              # publish the marts and metrics (reads Snowflake PROD as lightdash_user)
+.\bi\lightdash\publish.ps1             # dashboards as code: bi/lightdash/dashboards.py -> content/*.yml -> Lightdash
+```
+
+24 of 25 metrics are available in Lightdash. Month-end stock is exported per month only,
+and averages are stored as sum and count. Active customers (a rolling 90 days) stays
+MetricFlow-only; [docs/metrics_catalog.md](docs/metrics_catalog.md) lists where each metric is served.
+A pre-commit hook fails if the generated files drift from the MetricFlow definitions.
 
 ## Fact tables
 

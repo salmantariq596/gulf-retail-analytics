@@ -1,0 +1,46 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: mtr_merchandising_monthly_metric_month_month
+          yRef:
+            field: mtr_merchandising_monthly_closing_stock_value
+        type: line
+        yAxisIndex: 0
+    layout:
+      flipAxes: false
+      showIncompletePeriod: false
+      xField: mtr_merchandising_monthly_metric_month_month
+      yField: &id001
+      - mtr_merchandising_monthly_closing_stock_value
+  type: cartesian
+contentType: chart
+description: 'Stock on the last day of each month, at cost. A level, not a flow: never
+  summed over months.'
+metricQuery:
+  additionalMetrics: []
+  customDimensions: []
+  dimensions:
+  - mtr_merchandising_monthly_metric_month_month
+  exploreName: mtr_merchandising_monthly
+  filters: {}
+  limit: 500
+  metricOverrides: {}
+  metrics: *id001
+  sorts:
+  - descending: false
+    fieldId: mtr_merchandising_monthly_metric_month_month
+  tableCalculations: []
+  timezone: project_timezone
+name: Closing stock value by month
+slug: merch-closing-stock-by-month
+spaceSlug: gulf-retail
+tableConfig:
+  columnOrder:
+  - mtr_merchandising_monthly_metric_month_month
+  - mtr_merchandising_monthly_closing_stock_value
+tableName: mtr_merchandising_monthly
+verification: null
+version: 1

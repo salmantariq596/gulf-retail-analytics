@@ -1,0 +1,48 @@
+chartConfig:
+  config:
+    comparisonFormat: percentage
+    flipColors: false
+    label: Average basket (AED)
+    selectedField: mtr_sales_daily_average_basket_value
+    showComparison: true
+  type: big_number
+contentType: chart
+description: Last completed month, change vs the month before.
+metricQuery:
+  additionalMetrics: []
+  customDimensions: []
+  dimensions:
+  - mtr_sales_daily_metric_date_month
+  exploreName: mtr_sales_daily
+  filters:
+    dimensions:
+      and:
+      - id: ed94716f-aa62-56b8-9f0f-221aa850fc4d
+        operator: inThePast
+        settings:
+          completed: true
+          unitOfTime: months
+        target:
+          fieldId: mtr_sales_daily_metric_date
+        values:
+        - 2
+      id: 3c82756c-f366-580f-96b8-f696c1ec4d7f
+  limit: 2
+  metricOverrides: {}
+  metrics:
+  - mtr_sales_daily_average_basket_value
+  sorts:
+  - descending: true
+    fieldId: mtr_sales_daily_metric_date_month
+  tableCalculations: []
+  timezone: project_timezone
+name: Average basket (AED)
+slug: exec-kpi-basket
+spaceSlug: gulf-retail
+tableConfig:
+  columnOrder:
+  - mtr_sales_daily_metric_date_month
+  - mtr_sales_daily_average_basket_value
+tableName: mtr_sales_daily
+verification: null
+version: 1

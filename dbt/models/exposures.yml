@@ -1,0 +1,51 @@
+version: 2
+
+# The Lightdash dashboards that consume this project (bi/lightdash/dashboards.py).
+# Exposures put them in the lineage graph:  dbt ls --select +exposure:executive_overview
+# lists every model, source and test a dashboard depends on, so a change can be checked
+# against the dashboards it would affect.
+
+exposures:
+  - name: executive_overview
+    label: Executive overview
+    type: dashboard
+    maturity: medium
+    url: http://localhost:8080/projects/333135f4-5356-4cf8-9b1a-581f794bac50/dashboards/3af2dc9d-e196-4539-8a33-7aff545b0493/view
+    description: >
+      Group KPIs (net revenue, gross margin %, transactions, basket, return rate, ROAS) for the
+      last completed month, trends, country/channel/weekday splits and store performance.
+    depends_on:
+      - ref('mtr_sales_daily')
+      - ref('mtr_marketing_monthly')
+      - ref('dim_store')
+      - ref('dim_channel')
+      - ref('dim_date')
+    owner:
+      name: Analytics Engineering
+
+  - name: merchandising
+    label: Merchandising
+    type: dashboard
+    maturity: medium
+    url: http://localhost:8080/projects/333135f4-5356-4cf8-9b1a-581f794bac50/dashboards/9521fdda-6b81-4baa-976c-c4ef34f51f5a/view
+    description: Category revenue and margin, month-end stock and sell-through.
+    depends_on:
+      - ref('mtr_merchandising_monthly')
+      - ref('dim_store')
+    owner:
+      name: Analytics Engineering
+
+  - name: marketing_and_customers
+    label: Marketing & customers
+    type: dashboard
+    maturity: medium
+    url: http://localhost:8080/projects/333135f4-5356-4cf8-9b1a-581f794bac50/dashboards/4076d0f0-436f-44c1-bdc8-f3284a212e96/view
+    description: Marketing spend, first-touch ROAS by channel, online orders and delivery time.
+    depends_on:
+      - ref('mtr_marketing_monthly')
+      - ref('mtr_online_orders_daily')
+      - ref('dim_store')
+      - ref('dim_channel')
+      - ref('dim_date')
+    owner:
+      name: Analytics Engineering

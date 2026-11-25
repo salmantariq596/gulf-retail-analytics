@@ -1,0 +1,48 @@
+chartConfig:
+  config:
+    comparisonFormat: percentage
+    flipColors: false
+    label: Gross margin %
+    selectedField: mtr_sales_daily_gross_margin_pct
+    showComparison: true
+  type: big_number
+contentType: chart
+description: Last completed month, change vs the month before.
+metricQuery:
+  additionalMetrics: []
+  customDimensions: []
+  dimensions:
+  - mtr_sales_daily_metric_date_month
+  exploreName: mtr_sales_daily
+  filters:
+    dimensions:
+      and:
+      - id: e110bd4e-87c0-502b-89ce-40bcc4dbc874
+        operator: inThePast
+        settings:
+          completed: true
+          unitOfTime: months
+        target:
+          fieldId: mtr_sales_daily_metric_date
+        values:
+        - 2
+      id: bfc7dc7a-490d-5dbc-aa25-8d8a94ab4568
+  limit: 2
+  metricOverrides: {}
+  metrics:
+  - mtr_sales_daily_gross_margin_pct
+  sorts:
+  - descending: true
+    fieldId: mtr_sales_daily_metric_date_month
+  tableCalculations: []
+  timezone: project_timezone
+name: Gross margin %
+slug: exec-kpi-gross-margin-pct
+spaceSlug: gulf-retail
+tableConfig:
+  columnOrder:
+  - mtr_sales_daily_metric_date_month
+  - mtr_sales_daily_gross_margin_pct
+tableName: mtr_sales_daily
+verification: null
+version: 1

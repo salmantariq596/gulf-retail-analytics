@@ -1,0 +1,48 @@
+chartConfig:
+  config:
+    comparisonFormat: percentage
+    flipColors: false
+    label: Units sold
+    selectedField: mtr_merchandising_monthly_units_sold
+    showComparison: true
+  type: big_number
+contentType: chart
+description: Last completed month, change vs the month before.
+metricQuery:
+  additionalMetrics: []
+  customDimensions: []
+  dimensions:
+  - mtr_merchandising_monthly_metric_month_month
+  exploreName: mtr_merchandising_monthly
+  filters:
+    dimensions:
+      and:
+      - id: 3b61d0bd-0063-5700-a37d-4f3b3d69c052
+        operator: inThePast
+        settings:
+          completed: true
+          unitOfTime: months
+        target:
+          fieldId: mtr_merchandising_monthly_metric_month
+        values:
+        - 2
+      id: 6f39b645-6093-52d0-8241-e8c41d3f201b
+  limit: 2
+  metricOverrides: {}
+  metrics:
+  - mtr_merchandising_monthly_units_sold
+  sorts:
+  - descending: true
+    fieldId: mtr_merchandising_monthly_metric_month_month
+  tableCalculations: []
+  timezone: project_timezone
+name: Units sold
+slug: merch-kpi-units
+spaceSlug: gulf-retail
+tableConfig:
+  columnOrder:
+  - mtr_merchandising_monthly_metric_month_month
+  - mtr_merchandising_monthly_units_sold
+tableName: mtr_merchandising_monthly
+verification: null
+version: 1

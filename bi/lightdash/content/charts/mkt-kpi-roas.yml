@@ -1,0 +1,48 @@
+chartConfig:
+  config:
+    comparisonFormat: percentage
+    flipColors: false
+    label: ROAS (first touch)
+    selectedField: mtr_marketing_monthly_roas
+    showComparison: true
+  type: big_number
+contentType: chart
+description: Last completed month, change vs the month before.
+metricQuery:
+  additionalMetrics: []
+  customDimensions: []
+  dimensions:
+  - mtr_marketing_monthly_metric_month_month
+  exploreName: mtr_marketing_monthly
+  filters:
+    dimensions:
+      and:
+      - id: 37a3a27f-69c3-59d2-bc51-8743e29d917a
+        operator: inThePast
+        settings:
+          completed: true
+          unitOfTime: months
+        target:
+          fieldId: mtr_marketing_monthly_metric_month
+        values:
+        - 2
+      id: 92c154cb-a60b-5c57-a9d9-c336b7b8cc08
+  limit: 2
+  metricOverrides: {}
+  metrics:
+  - mtr_marketing_monthly_roas
+  sorts:
+  - descending: true
+    fieldId: mtr_marketing_monthly_metric_month_month
+  tableCalculations: []
+  timezone: project_timezone
+name: ROAS (first touch)
+slug: mkt-kpi-roas
+spaceSlug: gulf-retail
+tableConfig:
+  columnOrder:
+  - mtr_marketing_monthly_metric_month_month
+  - mtr_marketing_monthly_roas
+tableName: mtr_marketing_monthly
+verification: null
+version: 1

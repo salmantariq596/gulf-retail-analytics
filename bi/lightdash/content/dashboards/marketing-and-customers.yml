@@ -1,0 +1,146 @@
+contentType: dashboard
+description: Spend, return on spend and the online store.
+filters:
+  dimensions: []
+  metrics: []
+  tableCalculations: []
+name: Marketing & customers
+slug: marketing-and-customers
+spaceSlug: gulf-retail
+tabs: []
+tiles:
+- h: 4
+  properties:
+    chartName: Marketing spend (AED)
+    chartSlug: mkt-kpi-ad-spend
+    hideTitle: false
+    title: ''
+  tabSlug: null
+  tileSlug: mkt-kpi-ad-spend
+  type: saved_chart
+  w: 6
+  x: 0
+  y: 0
+- h: 4
+  properties:
+    chartName: ROAS (first touch)
+    chartSlug: mkt-kpi-roas
+    hideTitle: false
+    title: ''
+  tabSlug: null
+  tileSlug: mkt-kpi-roas
+  type: saved_chart
+  w: 6
+  x: 6
+  y: 0
+- h: 4
+  properties:
+    chartName: Online orders
+    chartSlug: mkt-kpi-online-orders
+    hideTitle: false
+    title: ''
+  tabSlug: null
+  tileSlug: mkt-kpi-online-orders
+  type: saved_chart
+  w: 6
+  x: 12
+  y: 0
+- h: 4
+  properties:
+    chartName: Average delivery (hours)
+    chartSlug: mkt-kpi-delivery-hours
+    hideTitle: false
+    title: ''
+  tabSlug: null
+  tileSlug: mkt-kpi-delivery-hours
+  type: saved_chart
+  w: 6
+  x: 18
+  y: 0
+- h: 9
+  properties:
+    chartName: ROAS by paid channel
+    chartSlug: mkt-roas-by-channel
+    hideTitle: false
+    title: ''
+  tabSlug: null
+  tileSlug: mkt-roas-by-channel
+  type: saved_chart
+  w: 12
+  x: 0
+  y: 4
+- h: 9
+  properties:
+    chartName: Marketing spend by channel
+    chartSlug: mkt-spend-by-channel
+    hideTitle: false
+    title: ''
+  tabSlug: null
+  tileSlug: mkt-spend-by-channel
+  type: saved_chart
+  w: 12
+  x: 12
+  y: 4
+- h: 9
+  properties:
+    chartName: Spend and ROAS by month
+    chartSlug: mkt-spend-and-roas-by-month
+    hideTitle: false
+    title: ''
+  tabSlug: null
+  tileSlug: mkt-spend-and-roas-by-month
+  type: saved_chart
+  w: 12
+  x: 0
+  y: 13
+- h: 9
+  properties:
+    chartName: Net revenue by acquisition channel
+    chartSlug: mkt-net-revenue-by-acquisition
+    hideTitle: false
+    title: ''
+  tabSlug: null
+  tileSlug: mkt-net-revenue-by-acquisition
+  type: saved_chart
+  w: 12
+  x: 12
+  y: 13
+- h: 9
+  properties:
+    chartName: Online orders and delivery time by month
+    chartSlug: mkt-online-orders-by-month
+    hideTitle: false
+    title: ''
+  tabSlug: null
+  tileSlug: mkt-online-orders-by-month
+  type: saved_chart
+  w: 12
+  x: 0
+  y: 22
+- h: 9
+  properties:
+    chartName: 'Online orders: web vs app'
+    chartSlug: mkt-online-orders-by-channel
+    hideTitle: false
+    title: ''
+  tabSlug: null
+  tileSlug: mkt-online-orders-by-channel
+  type: saved_chart
+  w: 12
+  x: 12
+  y: 22
+- h: 3
+  properties:
+    content: 'ROAS is first-touch: a customer''s lifetime net revenue counts for the
+      channel that acquired them, so it runs high next to platform-reported ROAS.
+      **Active customers (90 days)** is a rolling count with no pre-aggregated form;
+      query it with `mf query --metrics active_customers --group-by metric_time__month`.'
+    hideFrame: false
+    title: About these numbers
+  tabSlug: null
+  type: markdown
+  w: 24
+  x: 0
+  y: 31
+verification: null
+version: 1

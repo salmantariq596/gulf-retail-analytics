@@ -1,0 +1,45 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: mtr_merchandising_monthly_category
+          yRef:
+            field: mtr_merchandising_monthly_net_revenue
+        type: bar
+        yAxisIndex: 0
+    layout:
+      flipAxes: true
+      showIncompletePeriod: false
+      xField: mtr_merchandising_monthly_category
+      yField: &id001
+      - mtr_merchandising_monthly_net_revenue
+  type: cartesian
+contentType: chart
+description: null
+metricQuery:
+  additionalMetrics: []
+  customDimensions: []
+  dimensions:
+  - mtr_merchandising_monthly_category
+  exploreName: mtr_merchandising_monthly
+  filters: {}
+  limit: 500
+  metricOverrides: {}
+  metrics: *id001
+  sorts:
+  - descending: true
+    fieldId: mtr_merchandising_monthly_net_revenue
+  tableCalculations: []
+  timezone: project_timezone
+name: Net revenue by category
+slug: merch-net-revenue-by-category
+spaceSlug: gulf-retail
+tableConfig:
+  columnOrder:
+  - mtr_merchandising_monthly_category
+  - mtr_merchandising_monthly_net_revenue
+tableName: mtr_merchandising_monthly
+verification: null
+version: 1
