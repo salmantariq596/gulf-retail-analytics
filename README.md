@@ -29,6 +29,7 @@ Marketing CSV ──┘          DuckDB (dev) · Snowflake (prod) · orchestrate
 | [Bus matrix](docs/bus_matrix.md) | Facts × conformed dimensions, plus the grain of every fact |
 | [Source systems](docs/source_systems.md) | The five sources and the problems each one injects |
 | [Data model](docs/data_model.md) | Lineage and the star-schema ERD |
+| [dbt v2 comparison](docs/dbt_v2_comparison.md) | dbt 1.11 vs the Rust dbt v2 engine on this project: 7× faster parse, same build time, identical output |
 
 ## Progress
 

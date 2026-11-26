@@ -74,6 +74,9 @@ seeds:
     hijri_calendar:
       +column_types:
         date_day: date
+        # Umm al-Qura dates such as 1440-02-30 look like ISO dates but are not
+        # Gregorian ones: keep them as text (dbt v2's seed loader would infer DATE)
+        hijri_date: varchar
         hijri_year: integer
         hijri_month: integer
         hijri_day: integer

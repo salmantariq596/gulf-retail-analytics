@@ -478,16 +478,14 @@ models:
           type: sum
           sql: case when ${TABLE}.is_paid = true then ${TABLE}.total_sales_net_of_discounts end
           label: Sales net of discounts (AED) where is_paid_true
-          description: 'Helper: MetricFlow metric `sales_net_of_discounts` filtered on {{ Dimension(''marketing_channel__is_paid'')
-            }} = true.'
+          description: 'Helper: MetricFlow metric `sales_net_of_discounts` where is paid true.'
           hidden: true
           round: 2
         returns_value__is_paid_true:
           type: sum
           sql: case when ${TABLE}.is_paid = true then ${TABLE}.total_returns_value end
           label: Returns (AED) where is_paid_true
-          description: 'Helper: MetricFlow metric `returns_value` filtered on {{ Dimension(''marketing_channel__is_paid'')
-            }} = true.'
+          description: 'Helper: MetricFlow metric `returns_value` where is paid true.'
           hidden: true
           round: 2
         ad_spend:
