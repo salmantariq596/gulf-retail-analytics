@@ -20,16 +20,11 @@ concurrency:
 
 permissions:
   contents: read
-  pages: write
-  id-token: write
 
 jobs:
-  deploy:
+  build:
     runs-on: ubuntu-24.04
     timeout-minutes: 60
-    environment:
-      name: github-pages
-      url: ${{ steps.pages.outputs.page_url }}
     env:
       SNOWFLAKE_ACCOUNT: ${{ secrets.SNOWFLAKE_ACCOUNT }}
       SNOWFLAKE_USER: github_ci
@@ -65,6 +60,7 @@ jobs:
             echo "found=false" >> "$GITHUB_OUTPUT"
           fi
       - name: Build production
+        # previous state found -> only what changed; else (first deploy, or full_build) everything
         run: |
           if [ "${{ steps.state.outputs.found }}" = "true" ]; then
             dbt build --target prod --select state:modified+ --state prev-state
@@ -80,10 +76,23 @@ jobs:
       - uses: actions/upload-pages-artifact@v3
         with:
           path: site
-      - name: Publish to GitHub Pages
-        id: pages
-        uses: actions/deploy-pages@v4
       - name: Remove the key
         if: always()
         working-directory: .
         run: rm -f "$RUNNER_TEMP/github_ci.p8"
+
+  # A separate job, as in GitHub's own Pages workflows: publishing in the same job as the
+  # upload raced the artifact listing (0 artifacts found, then a duplicate on re-run).
+  publish:
+    needs: build
+    runs-on: ubuntu-24.04
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.pages.outputs.page_url }}
+    steps:
+      - name: Publish to GitHub Pages
+        id: pages
+        uses: actions/deploy-pages@v4
