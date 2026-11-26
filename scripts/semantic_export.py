@@ -431,7 +431,8 @@ class Translator:
                     "type": "sum",
                     "sql": f"case when {cond} then {self._column(measure)} end",
                     "label": f"{metric.get('label', name)} where {slug}",
-                    "description": f"Helper: MetricFlow metric `{name}` filtered on {flt.strip()}.",
+                    # plain words, not the {{ Dimension(...) }} Jinja: dbt v2 renders every YAML string
+                    "description": f"Helper: MetricFlow metric `{name}` where {slug.replace('_', ' ')}.",
                     "hidden": True,
                     "round": 2,
                 }
