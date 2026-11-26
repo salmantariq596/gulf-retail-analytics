@@ -130,6 +130,42 @@ def kpi_row(kpis: list[dict], y: int = 0) -> list[dict]:
     return [tile(k, i * w, y, w, 4) for i, k in enumerate(kpis)]
 
 
+COUNTRIES = ("United Arab Emirates", "Saudi Arabia", "Qatar")
+
+
+def weekday_share_by_country() -> dict:
+    """Each country's net revenue by day of week as a share of its own week, so countries of
+    very different size compare at a glance: grouped bars, one per country."""
+    day, dow, country = f("dim_date", "day_name"), f("dim_date", "iso_day_of_week"), f("dim_store", "country_name")
+    share = "share_of_week"
+    ch = chart(
+        "exec-net-revenue-by-weekday", "Share of the week's net revenue by day, per country", SALES,
+        [day, dow, country], [f(SALES, "net_revenue")],
+        {"type": "cartesian", "config": {
+            "layout": {"xField": day, "yField": [share], "flipAxes": False},
+            "eChartsConfig": {"series": [
+                {"type": "bar", "yAxisIndex": 0, "name": c,
+                 "encode": {"xRef": {"field": day},
+                            "yRef": {"field": share, "pivotValues": [{"field": country, "value": c}]}}}
+                for c in COUNTRIES
+            ]},
+        }},
+        description=("There is no single Gulf weekend: the UAE peaks Sat-Sun (Sat-Sun since 2022, "
+                     "Fri-Sat before), Saudi Arabia and Qatar Fri-Sat. Shares of each country's own week."),
+        sorts=[(dow, False)],
+    )
+    ch["metricQuery"]["tableCalculations"] = [{
+        "name": share,
+        "displayName": "Share of the week",
+        "sql": "${mtr_sales_daily.net_revenue} / SUM(${mtr_sales_daily.net_revenue}) "
+               "OVER (PARTITION BY ${dim_store.country_name})",
+        "format": {"type": "percent", "round": 1},
+    }]
+    ch["pivotConfig"] = {"columns": [country]}
+    ch["tableConfig"]["columnOrder"] = [day, dow, country, f(SALES, "net_revenue"), share]
+    return ch
+
+
 # ----------------------------------------------------------------- Executive overview
 def executive() -> tuple[list[dict], dict]:
     kpis = [
@@ -151,11 +187,7 @@ def executive() -> tuple[list[dict], dict]:
     by_channel = cartesian(
         "exec-net-revenue-by-channel", "Net revenue by sales channel", SALES, f("dim_channel", "channel_name"),
         [(f(SALES, "net_revenue"), "bar", 0)], horizontal=True, sort_by=(f(SALES, "net_revenue"), True))
-    weekday = cartesian(
-        "exec-net-revenue-by-weekday", "Net revenue by day of week", SALES, f("dim_date", "day_name"),
-        [(f(SALES, "net_revenue"), "bar", 0)], sort_by=(f("dim_date", "iso_day_of_week"), False),
-        extra_dims=[f("dim_date", "iso_day_of_week")],
-        description="Gulf weekends: UAE Sat-Sun since 2022 (Fri-Sat before); KSA and Qatar Fri-Sat.")
+    weekday = weekday_share_by_country()
     stores = table(
         "exec-store-performance", "Store performance", SALES,
         [f("dim_store", "store_name_en"), f("dim_store", "country_name"), f("dim_store", "store_format")],

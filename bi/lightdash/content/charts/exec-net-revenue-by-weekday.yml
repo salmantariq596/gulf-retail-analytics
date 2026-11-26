@@ -6,43 +6,83 @@ chartConfig:
           xRef:
             field: dim_date_day_name
           yRef:
-            field: mtr_sales_daily_net_revenue
+            field: share_of_week
+            pivotValues:
+            - field: dim_store_country_name
+              value: United Arab Emirates
+        name: United Arab Emirates
+        type: bar
+        yAxisIndex: 0
+      - encode:
+          xRef:
+            field: dim_date_day_name
+          yRef:
+            field: share_of_week
+            pivotValues:
+            - field: dim_store_country_name
+              value: Saudi Arabia
+        name: Saudi Arabia
+        type: bar
+        yAxisIndex: 0
+      - encode:
+          xRef:
+            field: dim_date_day_name
+          yRef:
+            field: share_of_week
+            pivotValues:
+            - field: dim_store_country_name
+              value: Qatar
+        name: Qatar
         type: bar
         yAxisIndex: 0
     layout:
       flipAxes: false
-      showIncompletePeriod: false
       xField: dim_date_day_name
-      yField: &id001
-      - mtr_sales_daily_net_revenue
+      yField:
+      - share_of_week
   type: cartesian
 contentType: chart
-description: 'Gulf weekends: UAE Sat-Sun since 2022 (Fri-Sat before); KSA and Qatar
-  Fri-Sat.'
+description: 'There is no single Gulf weekend: the UAE peaks Sat-Sun (Sat-Sun since
+  2022, Fri-Sat before), Saudi Arabia and Qatar Fri-Sat. Shares of each country''s
+  own week.'
 metricQuery:
   additionalMetrics: []
   customDimensions: []
   dimensions:
   - dim_date_day_name
   - dim_date_iso_day_of_week
+  - dim_store_country_name
   exploreName: mtr_sales_daily
   filters: {}
   limit: 500
   metricOverrides: {}
-  metrics: *id001
+  metrics:
+  - mtr_sales_daily_net_revenue
   sorts:
   - descending: false
     fieldId: dim_date_iso_day_of_week
-  tableCalculations: []
+  tableCalculations:
+  - displayName: Share of the week
+    format:
+      round: 1
+      type: percent
+    name: share_of_week
+    sql: ${mtr_sales_daily.net_revenue} / SUM(${mtr_sales_daily.net_revenue}) OVER
+      (PARTITION BY ${dim_store.country_name})
   timezone: project_timezone
-name: Net revenue by day of week
+name: Share of the week's net revenue by day, per country
+pivotConfig:
+  columns:
+  - dim_store_country_name
 slug: exec-net-revenue-by-weekday
 spaceSlug: gulf-retail
 tableConfig:
   columnOrder:
   - dim_date_day_name
   - dim_date_iso_day_of_week
+  - dim_store_country_name
   - mtr_sales_daily_net_revenue
+  - share_of_week
 tableName: mtr_sales_daily
 verification: null
 version: 1

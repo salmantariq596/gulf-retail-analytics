@@ -119,7 +119,7 @@ tiles:
   y: 13
 - h: 8
   properties:
-    chartName: Net revenue by day of week
+    chartName: Share of the week's net revenue by day, per country
     chartSlug: exec-net-revenue-by-weekday
     hideTitle: false
     title: ''
