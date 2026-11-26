@@ -18,7 +18,8 @@ def _repo_path(env: str, default: str) -> Path:
 
 DUCKDB_PATH = _repo_path("DUCKDB_PATH", "data/warehouse/najm_dev.duckdb")
 LANDING_DIR = _repo_path("GEN_OUTPUT_DIR", "data/landing")
-PIPELINES_DIR = REPO_ROOT / "data" / "dlt_pipelines"
+# pipeline state (incremental watermarks); separate dirs keep separate datasets apart
+PIPELINES_DIR = _repo_path("DLT_PIPELINES_DIR", "data/dlt_pipelines")
 # 127.0.0.1, not localhost: on Windows "localhost" tries IPv6 first and adds ~2s per request
 API_BASE_URL = os.getenv("MOCK_API_BASE_URL", "http://127.0.0.1:8000")
 

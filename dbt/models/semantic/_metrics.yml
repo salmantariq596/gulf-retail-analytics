@@ -1,0 +1,173 @@
+version: 2
+
+# Governed metrics. Each one implements a definition in docs/business_definitions.md;
+# dashboards query these instead of re-deriving them in SQL.
+
+metrics:
+  # ------------------------------------------------------------- base metrics
+  - name: gross_sales
+    label: Gross sales (AED)
+    description: Quantity x price charged, excluding VAT, before discounts.
+    type: simple
+    type_params: {measure: gross_sales}
+
+  - name: discounts
+    label: Discounts (AED)
+    type: simple
+    type_params: {measure: discounts}
+
+  - name: sales_net_of_discounts
+    label: Sales net of discounts (AED)
+    description: Gross sales minus discounts, excluding VAT, before returns.
+    type: simple
+    type_params: {measure: sales_net_of_discounts}
+
+  - name: returns_value
+    label: Returns (AED)
+    description: Refunds excluding VAT, booked on the return date.
+    type: simple
+    type_params:
+      measure: {name: returns_value, fill_nulls_with: 0, join_to_timespine: true}
+
+  - name: cogs
+    label: Cost of goods sold (AED)
+    description: Quantity x unit cost valid on the sale date.
+    type: simple
+    type_params: {measure: cogs}
+
+  - name: returned_cogs
+    label: Returned cost of goods (AED)
+    type: simple
+    type_params:
+      measure: {name: returned_cogs, fill_nulls_with: 0, join_to_timespine: true}
+
+  - name: transactions
+    label: Transactions
+    description: Distinct POS receipts plus online orders.
+    type: simple
+    type_params: {measure: transaction_count}
+
+  - name: ad_spend
+    label: Marketing spend (AED)
+    type: simple
+    type_params: {measure: spend}
+
+  - name: closing_stock_units
+    label: Closing stock (units)
+    description: Stock on hand on the last day of the period (semi-additive).
+    type: simple
+    type_params: {measure: closing_stock_units}
+
+  - name: closing_stock_value
+    label: Closing stock value at cost (AED)
+    type: simple
+    type_params: {measure: closing_stock_value}
+
+  - name: online_orders
+    label: Online orders placed
+    type: simple
+    type_params: {measure: orders_placed}
+
+  - name: vat_collected
+    label: VAT collected (AED)
+    description: VAT on sales minus VAT refunded on returns.
+    type: derived
+    type_params:
+      expr: vat_on_sales - vat_on_returns
+      metrics:
+        - {name: vat_on_sales_metric, alias: vat_on_sales}
+        - {name: vat_on_returns_metric, alias: vat_on_returns}
+
+  - name: vat_on_sales_metric
+    label: VAT on sales (AED)
+    type: simple
+    type_params: {measure: vat_on_sales}
+
+  - name: vat_on_returns_metric
+    label: VAT on returns (AED)
+    type: simple
+    type_params:
+      measure: {name: vat_on_returns, fill_nulls_with: 0, join_to_timespine: true}
+
+  # ------------------------------------------------- the 10 governed metrics
+  - name: net_revenue
+    label: Net revenue (AED)
+    description: Gross sales - discounts - returns, excluding VAT, in AED. Returns on the return date.
+    type: derived
+    type_params:
+      expr: sales_net_of_discounts - returns_value
+      metrics: [sales_net_of_discounts, returns_value]
+
+  - name: gross_margin
+    label: Gross margin (AED)
+    description: Net revenue - cost of goods sold (net of returned cost), cost valid on the sale date.
+    type: derived
+    type_params:
+      expr: (sales_net_of_discounts - returns_value) - (cogs - returned_cogs)
+      metrics: [sales_net_of_discounts, returns_value, cogs, returned_cogs]
+
+  - name: gross_margin_pct
+    label: Gross margin %
+    description: Gross margin / net revenue, from summed parts (never an average of percentages).
+    type: derived
+    type_params:
+      expr: gross_margin / nullif(net_revenue, 0)
+      metrics: [gross_margin, net_revenue]
+
+  - name: units_sold
+    label: Units sold
+    type: simple
+    type_params: {measure: units_sold}
+
+  - name: average_basket_value
+    label: Average basket value (AED)
+    description: (Gross sales - discounts) / transactions, excluding VAT; returns excluded on purpose.
+    type: ratio
+    type_params:
+      numerator: sales_net_of_discounts
+      denominator: transactions
+
+  - name: return_rate
+    label: Return rate
+    description: Returns / (gross sales - discounts), value-based, excluding VAT.
+    type: ratio
+    type_params:
+      numerator: returns_value
+      denominator: sales_net_of_discounts
+
+  - name: active_customers
+    label: Active customers (90 days)
+    description: Identified customers with at least one purchase in the 90 days ending on the reporting date.
+    type: cumulative
+    type_params:
+      measure: purchasing_customers
+      # at month/quarter grain, report the value on the LAST day of the period
+      cumulative_type_params: {window: 90 days, period_agg: last}
+
+  - name: sell_through_rate
+    label: Sell-through rate
+    description: Units sold / (units sold + closing stock at period end).
+    type: derived
+    type_params:
+      expr: units_sold / nullif(units_sold + closing_stock_units, 0)
+      metrics: [units_sold, closing_stock_units]
+
+  - name: roas
+    label: ROAS (first-touch)
+    description: >
+      Net revenue from customers acquired through a paid channel / marketing spend. First-touch
+      attribution by acquisition channel; see the limitations in docs/business_definitions.md.
+    type: derived
+    type_params:
+      expr: attributed_revenue / nullif(ad_spend, 0)
+      metrics:
+        - name: net_revenue
+          alias: attributed_revenue
+          filter: "{{ Dimension('marketing_channel__is_paid') }} = true"
+        - name: ad_spend
+
+  - name: average_delivery_hours
+    label: Average delivery time (hours)
+    description: Average hours from placing to delivery, for delivered orders, by placed date.
+    type: simple
+    type_params: {measure: delivery_hours}

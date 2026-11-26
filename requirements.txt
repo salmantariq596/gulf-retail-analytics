@@ -1,5 +1,5 @@
-# Phases 0–5: generator, mock API, ingestion, dbt on DuckDB.
-# MetricFlow, Dagster and Lightdash deps are added in Phase 6.
+# Generator, mock API, ingestion, dbt (DuckDB + Snowflake), MetricFlow and Dagster.
+# Lightdash runs in Docker (bi/lightdash), not from this environment.
 
 # Data generator + mock API
 faker>=40
@@ -25,6 +25,14 @@ dbt-snowflake~=1.11.0   # Phase 5: production warehouse
 # Phase 5: dlt -> Snowflake (key-pair auth)
 dlt[snowflake]>=1.30
 cryptography>=42
+
+# Phase 6: semantic layer and orchestration
+dbt-metricflow==0.16.0        # `mf` CLI: validate and query the semantic layer
+dagster==1.13.29
+dagster-webserver==1.13.29
+dagster-dbt==0.29.29
+dagster-dlt==0.29.29
+protobuf>=6,<7                # dbt-core 1.11 requires <7; Dagster would otherwise pull 7.x
 
 # Quality
 sqlfluff>=3.0

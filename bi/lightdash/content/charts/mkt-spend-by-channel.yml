@@ -1,0 +1,54 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: mtr_marketing_monthly_channel_name
+          yRef:
+            field: mtr_marketing_monthly_ad_spend
+        type: bar
+        yAxisIndex: 0
+    layout:
+      flipAxes: true
+      showIncompletePeriod: false
+      xField: mtr_marketing_monthly_channel_name
+      yField: &id001
+      - mtr_marketing_monthly_ad_spend
+  type: cartesian
+contentType: chart
+description: null
+metricQuery:
+  additionalMetrics: []
+  customDimensions: []
+  dimensions:
+  - mtr_marketing_monthly_channel_name
+  exploreName: mtr_marketing_monthly
+  filters:
+    dimensions:
+      and:
+      - id: 3f5b8498-bfc7-58d3-a5ab-3b07e797f4ed
+        operator: equals
+        target:
+          fieldId: mtr_marketing_monthly_is_paid
+        values:
+        - true
+      id: 7864001f-540e-5eeb-b6d4-e15aff0229ad
+  limit: 500
+  metricOverrides: {}
+  metrics: *id001
+  sorts:
+  - descending: true
+    fieldId: mtr_marketing_monthly_ad_spend
+  tableCalculations: []
+  timezone: project_timezone
+name: Marketing spend by channel
+slug: mkt-spend-by-channel
+spaceSlug: gulf-retail
+tableConfig:
+  columnOrder:
+  - mtr_marketing_monthly_channel_name
+  - mtr_marketing_monthly_ad_spend
+tableName: mtr_marketing_monthly
+verification: null
+version: 1

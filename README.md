@@ -1,5 +1,9 @@
 # Gulf Retail Analytics Warehouse
 
+[![CI](https://github.com/salmantariq596/gulf-retail-analytics/actions/workflows/ci.yml/badge.svg)](https://github.com/salmantariq596/gulf-retail-analytics/actions/workflows/ci.yml)
+[![Deploy](https://github.com/salmantariq596/gulf-retail-analytics/actions/workflows/deploy.yml/badge.svg)](https://github.com/salmantariq596/gulf-retail-analytics/actions/workflows/deploy.yml)
+[![dbt docs](https://img.shields.io/badge/dbt_docs-live-FF694B?logo=dbt&logoColor=white)](https://salmantariq596.github.io/gulf-retail-analytics/)
+
 A dbt project that models **Najm Retail**, a fictional electronics and home goods chain with 25 stores across the UAE, Saudi Arabia and Qatar plus an online store. The model is a tested Kimball star schema with SCD Type 2 history and a MetricFlow semantic layer. It is developed on DuckDB and deployed to Snowflake.
 
 > **Business question:** Which stores, products and channels make money after returns and discounts, how much stock are we holding, and which marketing spend brings customers who come back?
@@ -33,9 +37,9 @@ Marketing CSV ──┘          DuckDB (dev) · Snowflake (prod) · orchestrate
 - [x] **Phase 2** — dbt setup, sources, seeds, staging, SQLFluff *(17 staging models, 8 seeds, 137 tests, 13 freshness checks)*
 - [x] **Phase 3** — Snapshots, intermediate models, dimensions with contracts *(2 snapshots, 8 intermediate models, 7 contracted dimensions)*
 - [x] **Phase 4** — Fact tables, incremental models, 100+ tests *(5 facts + 1 report, 275 data tests + 4 unit tests)*
-- [ ] **Phase 5** — Snowflake: RBAC, warehouses, prod build
-- [ ] **Phase 6** — MetricFlow metrics, Lightdash dashboards, Dagster
-- [ ] **Phase 7** — CI/CD, docs site, launch
+- [ ] **Phase 5** — Snowflake: RBAC, warehouses, prod build *(RBAC, key-pair service users and PROD build done; full 3-year load pending)*
+- [ ] **Phase 6** — MetricFlow metrics, Lightdash dashboards, Dagster *(25 metrics, 4 generated metric tables, 3 dashboards as code, exposures, Dagster daily job)*
+- [ ] **Phase 7** — CI/CD, docs site, launch *(PR checks, slim CI, deploy + docs site; launch pending)*
 
 ## Run locally
 
@@ -58,6 +62,48 @@ najm-gen run --days 1 && najm-ingest all
 cd dbt && dbt deps && dbt source freshness && dbt build
 ```
 
+## Orchestration (Dagster)
+
+One asset graph runs from the source systems to the governed metrics
+([orchestration/najm_orchestration/definitions.py](orchestration/najm_orchestration/definitions.py)):
+
+```
+source_systems_day ─► pos/* online/* erp/* catalog/* marketing/*  (dlt, one asset per raw table)
+                   ─► dbt seeds, snapshots, staging ─► intermediate ─► marts  (286 tests as asset checks)
+                   ─► metricflow_reconciliation  (Lightdash metrics == mf query)
+```
+
+- **Lineage:** dlt tables are keyed like the dbt sources (`pos/sales`), so lineage is unbroken from Postgres, the API and the files through to the dashboards' tables.
+- **Freshness gate:** `dbt source freshness` runs before `dbt build`, so stale raw data stops the run instead of publishing old numbers.
+- **Schedule:** the `daily_refresh` job runs at 06:00 Asia/Dubai. The schedule ships switched off; turn it on in the UI.
+
+```powershell
+$env:DAGSTER_HOME = "$PWD\data\dagster_home"
+dagster dev                                   # UI on http://localhost:3000
+dagster job execute -m najm_orchestration.definitions -j daily_refresh
+# against Snowflake: $env:DBT_TARGET = "prod"; $env:NAJM_WAREHOUSE = "snowflake"
+```
+
+## Metrics and dashboards
+
+MetricFlow (`dbt/models/semantic/`) is the single definition of every metric. Open-source
+Lightdash cannot query MetricFlow, so the BI layer is **generated** from it and **proved equal** to it:
+
+```powershell
+python scripts/semantic_export.py      # MetricFlow YAML -> mtr_* tables + Lightdash metrics + docs/metrics_catalog.md
+cd dbt; dbt build -s path:models/marts/metrics; cd ..
+python scripts/reconcile_metrics.py    # every exported metric vs `mf query`, month by month
+
+.\bi\lightdash\up.ps1                  # Lightdash on http://localhost:8080 (login in bi/lightdash/.env)
+.\bi\lightdash\deploy.ps1              # publish the marts and metrics (reads Snowflake PROD as lightdash_user)
+.\bi\lightdash\publish.ps1             # dashboards as code: bi/lightdash/dashboards.py -> content/*.yml -> Lightdash
+```
+
+24 of 25 metrics are available in Lightdash. Month-end stock is exported per month only,
+and averages are stored as sum and count. Active customers (a rolling 90 days) stays
+MetricFlow-only; [docs/metrics_catalog.md](docs/metrics_catalog.md) lists where each metric is served.
+A pre-commit hook fails if the generated files drift from the MetricFlow definitions.
+
 ## Fact tables
 
 | Fact | Type | Grain | Load |
@@ -69,6 +115,18 @@ cd dbt && dbt deps && dbt source freshness && dbt build
 | `fct_marketing_spend` | Transaction (daily) | One campaign × channel × country × day | Full rebuild |
 
 **Late data:** incremental facts use `delete+insert` keyed on the business date and rebuild the last 3 days on every run. Online orders arrive up to 2 days late and can be cancelled within 48 hours. Replacing the whole window picks up late rows *and* removes cancelled ones, which a merge on the line key could not do. Rows older than the window need `dbt build --full-refresh`.
+
+## CI/CD
+
+| Workflow | When | What it does |
+|---|---|---|
+| [CI](.github/workflows/ci.yml) · lint | every pull request | pre-commit: SQLFluff, MetricFlow-export sync, YAML, private-key scan, unit tests |
+| CI · e2e-duckdb | every pull request | Generates a 5-week sample → Postgres, API and files → dlt → DuckDB → `dbt build` → MetricFlow reconciliation, plus the Dagster graph test. No credentials needed. |
+| CI · slim-ci | every pull request | Snowflake: `dbt build --select state:modified+ --defer` against the production manifest, in a temporary `ci_pr_<n>` schema (incremental facts read only 30 days), dropped afterwards |
+| [Deploy](.github/workflows/deploy.yml) | merge to `main` | Builds the changed models in PROD, regenerates the [dbt docs site](https://salmantariq596.github.io/gulf-retail-analytics/) and publishes it to GitHub Pages |
+
+- **Production state:** the docs site's `manifest.json` is what slim CI compares pull requests against.
+- **CI login:** CI signs in to Snowflake as its own service user, `github_ci`. Its key exists only as a GitHub secret ([snowflake/setup_github_ci.py](snowflake/setup_github_ci.py) creates and rotates it).
 
 ## Testing strategy
 

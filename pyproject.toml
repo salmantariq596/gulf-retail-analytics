@@ -13,8 +13,16 @@ najm-gen = "najm_gen.cli:main"
 najm-ingest = "najm_ingest.cli:main"
 
 [tool.setuptools]
-packages = ["najm_gen", "najm_ingest"]
+packages = ["najm_gen", "najm_ingest", "najm_orchestration"]
 
 [tool.setuptools.package-dir]
 najm_gen = "generator/najm_gen"
 najm_ingest = "ingestion/najm_ingest"
+najm_orchestration = "orchestration/najm_orchestration"
+
+[tool.dagster]
+module_name = "najm_orchestration.definitions"
+code_location_name = "gulf_retail"
+
+[tool.pytest.ini_options]
+markers = ["slow: loads the Dagster code location (minutes); run with -m slow"]

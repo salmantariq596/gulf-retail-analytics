@@ -1,3 +1,7 @@
+-- Full-history invariant: off on the sampled slim-CI target (incremental facts read only
+-- the last ci_sample_days there). It runs in the DuckDB end-to-end job and on every deploy.
+{{ config(enabled=target.name != 'ci') }}
+
 -- Reconciliation to source: for every POS receipt that counts as business (completed,
 -- not training mode), the VAT-inclusive total in fct_sales_lines must equal the
 -- receipt total printed by the till, minus any till-test SKU lines. Any difference

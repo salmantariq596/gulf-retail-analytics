@@ -36,3 +36,7 @@ orchestration/.dagster_home/
 Thumbs.db
 .vscode/
 ~$*.docx
+
+# Lightdash local secrets and CLI state
+bi/lightdash/.env
+.lightdash-metadata.json

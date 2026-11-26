@@ -3,6 +3,7 @@
 
       target   custom schema   ->  result
       prod     marts               marts                   (PROD.MARTS: clean names for consumers)
+      lightdash  (read-only BI connection: resolves to the same PROD schemas)
       dev      marts               <target.schema>_marts   (DEV.DBT_SALMAN_MARTS, or dev_marts on DuckDB)
       ci       marts               <target.schema>_marts   (DEV.CI_PR_42_MARTS)
 
@@ -13,7 +14,7 @@
     {%- set default_schema = target.schema -%}
     {%- if custom_schema_name is none -%}
         {{ default_schema }}
-    {%- elif target.name == 'prod' -%}
+    {%- elif target.name in ('prod', 'lightdash') -%}
         {{ custom_schema_name | trim }}
     {%- else -%}
         {{ default_schema }}_{{ custom_schema_name | trim }}

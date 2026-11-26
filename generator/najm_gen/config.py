@@ -26,6 +26,8 @@ class Profile:
 
 
 PROFILES: dict[str, Profile] = {
+    # ~5 weeks at a fraction of dev volume: the end-to-end check in GitHub Actions
+    "ci": Profile("ci", 600, 6_000, 6, 700, 70, 5_000, 35),
     # ~3 months, small enough to iterate on in seconds-to-minutes
     "dev": Profile("dev", 3_000, 40_000, 25, 4_000, 400, 20_000, 92),
     # Target scale from the plan: 3 years, ~20M POS lines, ~2M online orders,

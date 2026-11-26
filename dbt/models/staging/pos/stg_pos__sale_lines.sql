@@ -5,6 +5,8 @@ with
 
 source as (
     select * from {{ source('pos', 'sale_lines') }}
+    -- loads are at-least-once: drop a row re-delivered at an incremental boundary
+    qualify row_number() over (partition by sale_line_id order by sale_line_id) = 1
 ),
 
 renamed as (

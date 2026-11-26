@@ -1,0 +1,48 @@
+chartConfig:
+  config:
+    comparisonFormat: percentage
+    flipColors: false
+    label: Sell-through rate
+    selectedField: mtr_merchandising_monthly_sell_through_rate
+    showComparison: true
+  type: big_number
+contentType: chart
+description: Last completed month, change vs the month before.
+metricQuery:
+  additionalMetrics: []
+  customDimensions: []
+  dimensions:
+  - mtr_merchandising_monthly_metric_month_month
+  exploreName: mtr_merchandising_monthly
+  filters:
+    dimensions:
+      and:
+      - id: 99306d53-1895-57a0-bc18-17790967ca99
+        operator: inThePast
+        settings:
+          completed: true
+          unitOfTime: months
+        target:
+          fieldId: mtr_merchandising_monthly_metric_month
+        values:
+        - 2
+      id: 0992458a-1396-5789-aa49-cdd1390803ef
+  limit: 2
+  metricOverrides: {}
+  metrics:
+  - mtr_merchandising_monthly_sell_through_rate
+  sorts:
+  - descending: true
+    fieldId: mtr_merchandising_monthly_metric_month_month
+  tableCalculations: []
+  timezone: project_timezone
+name: Sell-through rate
+slug: merch-kpi-sell-through
+spaceSlug: gulf-retail
+tableConfig:
+  columnOrder:
+  - mtr_merchandising_monthly_metric_month_month
+  - mtr_merchandising_monthly_sell_through_rate
+tableName: mtr_merchandising_monthly
+verification: null
+version: 1

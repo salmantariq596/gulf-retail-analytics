@@ -1,0 +1,157 @@
+contentType: dashboard
+description: Group performance across UAE, KSA and Qatar.
+filters:
+  dimensions: []
+  metrics: []
+  tableCalculations: []
+name: Executive overview
+slug: executive-overview
+spaceSlug: gulf-retail
+tabs: []
+tiles:
+- h: 4
+  properties:
+    chartName: Net revenue (AED)
+    chartSlug: exec-kpi-net-revenue
+    hideTitle: false
+    title: ''
+  tabSlug: null
+  tileSlug: exec-kpi-net-revenue
+  type: saved_chart
+  w: 4
+  x: 0
+  y: 0
+- h: 4
+  properties:
+    chartName: Gross margin %
+    chartSlug: exec-kpi-gross-margin-pct
+    hideTitle: false
+    title: ''
+  tabSlug: null
+  tileSlug: exec-kpi-gross-margin-pct
+  type: saved_chart
+  w: 4
+  x: 4
+  y: 0
+- h: 4
+  properties:
+    chartName: Transactions
+    chartSlug: exec-kpi-transactions
+    hideTitle: false
+    title: ''
+  tabSlug: null
+  tileSlug: exec-kpi-transactions
+  type: saved_chart
+  w: 4
+  x: 8
+  y: 0
+- h: 4
+  properties:
+    chartName: Average basket (AED)
+    chartSlug: exec-kpi-basket
+    hideTitle: false
+    title: ''
+  tabSlug: null
+  tileSlug: exec-kpi-basket
+  type: saved_chart
+  w: 4
+  x: 12
+  y: 0
+- h: 4
+  properties:
+    chartName: Return rate
+    chartSlug: exec-kpi-return-rate
+    hideTitle: false
+    title: ''
+  tabSlug: null
+  tileSlug: exec-kpi-return-rate
+  type: saved_chart
+  w: 4
+  x: 16
+  y: 0
+- h: 4
+  properties:
+    chartName: ROAS (first touch)
+    chartSlug: exec-kpi-roas
+    hideTitle: false
+    title: ''
+  tabSlug: null
+  tileSlug: exec-kpi-roas
+  type: saved_chart
+  w: 4
+  x: 20
+  y: 0
+- h: 9
+  properties:
+    chartName: Net revenue and gross margin % by month
+    chartSlug: exec-net-revenue-and-margin-by-month
+    hideTitle: false
+    title: ''
+  tabSlug: null
+  tileSlug: exec-net-revenue-and-margin-by-month
+  type: saved_chart
+  w: 16
+  x: 0
+  y: 4
+- h: 9
+  properties:
+    chartName: Net revenue by country
+    chartSlug: exec-net-revenue-by-country
+    hideTitle: false
+    title: ''
+  tabSlug: null
+  tileSlug: exec-net-revenue-by-country
+  type: saved_chart
+  w: 8
+  x: 16
+  y: 4
+- h: 8
+  properties:
+    chartName: Net revenue by sales channel
+    chartSlug: exec-net-revenue-by-channel
+    hideTitle: false
+    title: ''
+  tabSlug: null
+  tileSlug: exec-net-revenue-by-channel
+  type: saved_chart
+  w: 12
+  x: 0
+  y: 13
+- h: 8
+  properties:
+    chartName: Share of the week's net revenue by day, per country
+    chartSlug: exec-net-revenue-by-weekday
+    hideTitle: false
+    title: ''
+  tabSlug: null
+  tileSlug: exec-net-revenue-by-weekday
+  type: saved_chart
+  w: 12
+  x: 12
+  y: 13
+- h: 10
+  properties:
+    chartName: Store performance
+    chartSlug: exec-store-performance
+    hideTitle: false
+    title: ''
+  tabSlug: null
+  tileSlug: exec-store-performance
+  type: saved_chart
+  w: 24
+  x: 0
+  y: 21
+- h: 2
+  properties:
+    content: 'Every figure is a governed MetricFlow metric (net revenue = gross sales
+      - discounts - returns, excl. VAT, in AED). Definitions: `docs/business_definitions.md`;
+      where each metric is served: `docs/metrics_catalog.md`.'
+    hideFrame: false
+    title: About these numbers
+  tabSlug: null
+  type: markdown
+  w: 24
+  x: 0
+  y: 31
+verification: null
+version: 1

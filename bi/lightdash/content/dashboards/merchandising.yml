@@ -1,0 +1,144 @@
+contentType: dashboard
+description: Category performance, margin and stock.
+filters:
+  dimensions: []
+  metrics: []
+  tableCalculations: []
+name: Merchandising
+slug: merchandising
+spaceSlug: gulf-retail
+tabs: []
+tiles:
+- h: 4
+  properties:
+    chartName: Net revenue (AED)
+    chartSlug: merch-kpi-net-revenue
+    hideTitle: false
+    title: ''
+  tabSlug: null
+  tileSlug: merch-kpi-net-revenue
+  type: saved_chart
+  w: 6
+  x: 0
+  y: 0
+- h: 4
+  properties:
+    chartName: Gross margin %
+    chartSlug: merch-kpi-gross-margin-pct
+    hideTitle: false
+    title: ''
+  tabSlug: null
+  tileSlug: merch-kpi-gross-margin-pct
+  type: saved_chart
+  w: 6
+  x: 6
+  y: 0
+- h: 4
+  properties:
+    chartName: Units sold
+    chartSlug: merch-kpi-units
+    hideTitle: false
+    title: ''
+  tabSlug: null
+  tileSlug: merch-kpi-units
+  type: saved_chart
+  w: 6
+  x: 12
+  y: 0
+- h: 4
+  properties:
+    chartName: Sell-through rate
+    chartSlug: merch-kpi-sell-through
+    hideTitle: false
+    title: ''
+  tabSlug: null
+  tileSlug: merch-kpi-sell-through
+  type: saved_chart
+  w: 6
+  x: 18
+  y: 0
+- h: 4
+  properties:
+    chartName: Closing stock at cost (AED)
+    chartSlug: merch-kpi-stock-value
+    hideTitle: false
+    title: ''
+  tabSlug: null
+  tileSlug: merch-kpi-stock-value
+  type: saved_chart
+  w: 6
+  x: 0
+  y: 4
+- h: 4
+  properties:
+    content: 'Stock and sell-through are **month-end positions**: this explore only
+      offers a monthly time grain, and the stock charts show a single month at a time.'
+    hideFrame: false
+    title: Reading stock
+  tabSlug: null
+  type: markdown
+  w: 18
+  x: 6
+  y: 4
+- h: 9
+  properties:
+    chartName: Net revenue by category
+    chartSlug: merch-net-revenue-by-category
+    hideTitle: false
+    title: ''
+  tabSlug: null
+  tileSlug: merch-net-revenue-by-category
+  type: saved_chart
+  w: 12
+  x: 0
+  y: 8
+- h: 9
+  properties:
+    chartName: Gross margin % by category
+    chartSlug: merch-margin-by-category
+    hideTitle: false
+    title: ''
+  tabSlug: null
+  tileSlug: merch-margin-by-category
+  type: saved_chart
+  w: 12
+  x: 12
+  y: 8
+- h: 9
+  properties:
+    chartName: Sell-through by category (last completed month)
+    chartSlug: merch-sell-through-by-category
+    hideTitle: false
+    title: ''
+  tabSlug: null
+  tileSlug: merch-sell-through-by-category
+  type: saved_chart
+  w: 12
+  x: 0
+  y: 17
+- h: 9
+  properties:
+    chartName: Closing stock value by month
+    chartSlug: merch-closing-stock-by-month
+    hideTitle: false
+    title: ''
+  tabSlug: null
+  tileSlug: merch-closing-stock-by-month
+  type: saved_chart
+  w: 12
+  x: 12
+  y: 17
+- h: 9
+  properties:
+    chartName: Category scorecard (last completed month)
+    chartSlug: merch-category-scorecard
+    hideTitle: false
+    title: ''
+  tabSlug: null
+  tileSlug: merch-category-scorecard
+  type: saved_chart
+  w: 24
+  x: 0
+  y: 26
+verification: null
+version: 1

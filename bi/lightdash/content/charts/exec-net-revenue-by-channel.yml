@@ -1,0 +1,45 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: dim_channel_channel_name
+          yRef:
+            field: mtr_sales_daily_net_revenue
+        type: bar
+        yAxisIndex: 0
+    layout:
+      flipAxes: true
+      showIncompletePeriod: false
+      xField: dim_channel_channel_name
+      yField: &id001
+      - mtr_sales_daily_net_revenue
+  type: cartesian
+contentType: chart
+description: null
+metricQuery:
+  additionalMetrics: []
+  customDimensions: []
+  dimensions:
+  - dim_channel_channel_name
+  exploreName: mtr_sales_daily
+  filters: {}
+  limit: 500
+  metricOverrides: {}
+  metrics: *id001
+  sorts:
+  - descending: true
+    fieldId: mtr_sales_daily_net_revenue
+  tableCalculations: []
+  timezone: project_timezone
+name: Net revenue by sales channel
+slug: exec-net-revenue-by-channel
+spaceSlug: gulf-retail
+tableConfig:
+  columnOrder:
+  - dim_channel_channel_name
+  - mtr_sales_daily_net_revenue
+tableName: mtr_sales_daily
+verification: null
+version: 1

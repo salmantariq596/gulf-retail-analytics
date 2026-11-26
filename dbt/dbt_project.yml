@@ -23,6 +23,8 @@ vars:
   # Incremental facts reprocess this many business days on every run. Online orders
   # arrive up to 2 days late and can be cancelled within 48h, so 3 days covers both.
   lookback_days: 3
+  # Slim CI (target `ci`) builds incremental facts from scratch on only this many days
+  ci_sample_days: 30
   # Open-ended SCD2 bounds
   scd_start: "1900-01-01"
   scd_end: "9999-12-31"

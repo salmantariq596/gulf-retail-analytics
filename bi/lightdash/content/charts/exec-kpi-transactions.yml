@@ -1,0 +1,48 @@
+chartConfig:
+  config:
+    comparisonFormat: percentage
+    flipColors: false
+    label: Transactions
+    selectedField: mtr_sales_daily_transactions
+    showComparison: true
+  type: big_number
+contentType: chart
+description: Last completed month, change vs the month before.
+metricQuery:
+  additionalMetrics: []
+  customDimensions: []
+  dimensions:
+  - mtr_sales_daily_metric_date_month
+  exploreName: mtr_sales_daily
+  filters:
+    dimensions:
+      and:
+      - id: 89db0e2c-0638-54a2-bc7c-7e9d6afa046f
+        operator: inThePast
+        settings:
+          completed: true
+          unitOfTime: months
+        target:
+          fieldId: mtr_sales_daily_metric_date
+        values:
+        - 2
+      id: 4402311e-c894-51df-845e-5e687f3b9e7e
+  limit: 2
+  metricOverrides: {}
+  metrics:
+  - mtr_sales_daily_transactions
+  sorts:
+  - descending: true
+    fieldId: mtr_sales_daily_metric_date_month
+  tableCalculations: []
+  timezone: project_timezone
+name: Transactions
+slug: exec-kpi-transactions
+spaceSlug: gulf-retail
+tableConfig:
+  columnOrder:
+  - mtr_sales_daily_metric_date_month
+  - mtr_sales_daily_transactions
+tableName: mtr_sales_daily
+verification: null
+version: 1

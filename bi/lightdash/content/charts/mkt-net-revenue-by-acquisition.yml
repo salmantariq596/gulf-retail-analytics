@@ -1,0 +1,46 @@
+chartConfig:
+  config:
+    eChartsConfig:
+      series:
+      - encode:
+          xRef:
+            field: mtr_marketing_monthly_channel_name
+          yRef:
+            field: mtr_marketing_monthly_net_revenue
+        type: bar
+        yAxisIndex: 0
+    layout:
+      flipAxes: true
+      showIncompletePeriod: false
+      xField: mtr_marketing_monthly_channel_name
+      yField: &id001
+      - mtr_marketing_monthly_net_revenue
+  type: cartesian
+contentType: chart
+description: Includes organic and anonymous (walk-in) sales, which no channel can
+  claim.
+metricQuery:
+  additionalMetrics: []
+  customDimensions: []
+  dimensions:
+  - mtr_marketing_monthly_channel_name
+  exploreName: mtr_marketing_monthly
+  filters: {}
+  limit: 500
+  metricOverrides: {}
+  metrics: *id001
+  sorts:
+  - descending: true
+    fieldId: mtr_marketing_monthly_net_revenue
+  tableCalculations: []
+  timezone: project_timezone
+name: Net revenue by acquisition channel
+slug: mkt-net-revenue-by-acquisition
+spaceSlug: gulf-retail
+tableConfig:
+  columnOrder:
+  - mtr_marketing_monthly_channel_name
+  - mtr_marketing_monthly_net_revenue
+tableName: mtr_marketing_monthly
+verification: null
+version: 1

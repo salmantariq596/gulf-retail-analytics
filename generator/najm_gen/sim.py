@@ -13,6 +13,7 @@ incremental extraction by watermark never misses a row.
 from __future__ import annotations
 
 import json
+import os
 import pickle
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta, timezone
@@ -118,16 +119,40 @@ class State:
     counters: dict
 
     def save(self, path=C.STATE_PATH) -> None:
+        """Crash-safe checkpoint. The bytes are fsynced before the rename (a power cut once left
+        a renamed file full of zeros), and the previous checkpoint is kept as <name>.prev."""
         path.parent.mkdir(parents=True, exist_ok=True)
         tmp = path.with_suffix(".tmp")
         with open(tmp, "wb") as f:
             pickle.dump(self, f, protocol=pickle.HIGHEST_PROTOCOL)
+            f.flush()
+            os.fsync(f.fileno())
+        if path.exists():
+            path.replace(path.with_suffix(".prev"))
         tmp.replace(path)
 
     @staticmethod
-    def load(path=C.STATE_PATH) -> "State":
-        with open(path, "rb") as f:
-            return pickle.load(f)
+    def load(path=C.STATE_PATH, expect_next_day: date | None = None) -> "State":
+        """Load the checkpoint whose next day matches the database (see simulate_day):
+        the latest one, or the previous one if the crash came before the day's commit."""
+        problems = []
+        for candidate in (path, path.with_suffix(".prev")):
+            if not candidate.exists():
+                continue
+            try:
+                with open(candidate, "rb") as f:
+                    st = pickle.load(f)
+            except (pickle.UnpicklingError, EOFError, ValueError, AttributeError) as exc:
+                problems.append(f"{candidate.name}: unreadable ({exc.__class__.__name__})")
+                continue
+            if expect_next_day is None or st.current == expect_next_day:
+                if candidate != path:
+                    print(f"Using the previous checkpoint {candidate.name}; latest: {problems or 'ahead of the database'}")
+                return st
+            problems.append(f"{candidate.name}: next day {st.current}")
+        raise RuntimeError(
+            f"No checkpoint matches the database (next day there: {expect_next_day}); "
+            f"{'; '.join(problems) or 'no checkpoint found'}. Start again with `najm-gen backfill`.")
 
     def next_id(self, key: str, n: int = 1) -> np.ndarray:
         first = self.counters[key]
@@ -223,7 +248,7 @@ def _write_customers(cust: pd.DataFrame, pg: PostgresSink, online: OnlineSink) -
 # ---------------------------------------------------------------------------
 # One simulated day
 # ---------------------------------------------------------------------------
-def simulate_day(st: State, d: date, pg: PostgresSink, online: OnlineSink) -> dict:
+def simulate_day(st: State, d: date, pg: PostgresSink, online: OnlineSink, checkpoint: bool = False) -> dict:
     rng = st.rng
     stats: dict = {"date": d.isoformat()}
     _store_lifecycle(st, d, pg)
@@ -240,9 +265,16 @@ def simulate_day(st: State, d: date, pg: PostgresSink, online: OnlineSink) -> di
     _inventory(st, d, sold, restock, stats)
     _catalog_export(st, d)
 
-    pg.commit()
-    online.commit()
+    # Crash safety: save the checkpoint (next day = d + 1) BEFORE committing, and commit the
+    # progress marker in the same transaction as the POS data. A crash before the commit leaves
+    # the database at d, which State.load matches with the previous checkpoint; after it, with
+    # the latest. (The online store's SQLite commits a moment earlier, outside that transaction.)
     st.current = d + timedelta(days=1)
+    pg.set_progress(st.current)
+    if checkpoint:
+        st.save()
+    online.commit()
+    pg.commit()
     return stats
 
 

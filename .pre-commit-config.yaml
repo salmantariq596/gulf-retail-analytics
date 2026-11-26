@@ -22,9 +22,15 @@ repos:
         language: system
         files: ^dbt/(models|snapshots|tests|analyses|macros)/.*\.sql$
         require_serial: true
+      - id: semantic-export
+        name: Lightdash export is in sync with MetricFlow
+        entry: python scripts/semantic_export.py --check
+        language: system
+        pass_filenames: false
+        files: ^(dbt/models/semantic/|dbt/models/marts/metrics/|scripts/semantic_export\.py|docs/metrics_catalog\.md)
       - id: pytest
         name: pytest (generator)
-        entry: pytest -q tests
+        entry: pytest -q tests -m "not slow"
         language: system
         pass_filenames: false
         files: ^(generator|ingestion|tests)/.*\.py$

@@ -34,8 +34,9 @@ def _reset_outputs() -> None:
                 shutil.rmtree(child)
             else:
                 child.unlink()
-    if C.STATE_PATH.exists():
-        C.STATE_PATH.unlink()
+    for checkpoint in (C.STATE_PATH, C.STATE_PATH.with_suffix(".prev")):
+        if checkpoint.exists():
+            checkpoint.unlink()
 
 
 def cmd_init(args) -> State:
@@ -48,37 +49,38 @@ def cmd_init(args) -> State:
     pg, online = PostgresSink(), OnlineSink()
     try:
         initial_load(st, pg, online)
+        pg.set_progress(st.current)
+        st.save()
+        pg.commit()
     finally:
         pg.close()
         online.close()
-    st.save()
     print(f"  stores={len(st.stores)} products={len(st.products)} customers={len(st.customers)} "
           f"promotions={len(st.promotions)} campaigns={len(st.campaigns)}")
     return st
 
 
 def cmd_run(args, st: State | None = None) -> None:
-    st = st or State.load()
-    if args.until:
-        until = date.fromisoformat(args.until)
-    elif args.days:
-        until = st.current + timedelta(days=args.days - 1)
-    else:
-        until = st.end
-    if until < st.current:
-        print(f"Nothing to do: next day is {st.current}, until={until}")
-        return
     pg, online = PostgresSink(), OnlineSink()
     t0 = time.time()
     try:
+        # the checkpoint must match the day the database has reached (see simulate_day)
+        st = st or State.load(expect_next_day=pg.get_progress())
+        if args.until:
+            until = date.fromisoformat(args.until)
+        elif args.days:
+            until = st.current + timedelta(days=args.days - 1)
+        else:
+            until = st.end
+        if until < st.current:
+            print(f"Nothing to do: next day is {st.current}, until={until}")
+            return
         d = st.current
         every = getattr(args, "checkpoint_every", 1) or 1
         while d <= until:
-            s = simulate_day(st, d, pg, online)
-            # state is saved after the day's data is committed; with checkpoint_every > 1 a crash
-            # means re-running from the last checkpoint after `najm-gen init` (full profile only)
-            if d == until or (d - st.start).days % every == 0:
-                st.save()
+            # with checkpoint_every > 1, a crash between checkpoints means starting again
+            checkpoint = d == until or (d - st.start).days % every == 0
+            s = simulate_day(st, d, pg, online, checkpoint=checkpoint)
             print(f"  {s['date']}  pos_sales={s.get('pos_sales', 0):>6} lines={s.get('pos_lines', 0):>6} "
                   f"dups={s.get('pos_duplicates', 0):>3} returns={s.get('returns', 0):>4} "
                   f"online={s.get('online_orders', 0):>5} events={s.get('online_events', 0):>5} "

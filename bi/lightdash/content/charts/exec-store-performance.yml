@@ -1,0 +1,47 @@
+chartConfig:
+  config:
+    hideRowNumbers: true
+    showColumnCalculation: false
+    showRowCalculation: false
+    showTableNames: false
+  type: table
+contentType: chart
+description: null
+metricQuery:
+  additionalMetrics: []
+  customDimensions: []
+  dimensions:
+  - dim_store_store_name_en
+  - dim_store_country_name
+  - dim_store_store_format
+  exploreName: mtr_sales_daily
+  filters: {}
+  limit: 500
+  metricOverrides: {}
+  metrics:
+  - mtr_sales_daily_net_revenue
+  - mtr_sales_daily_gross_margin_pct
+  - mtr_sales_daily_transactions
+  - mtr_sales_daily_average_basket_value
+  - mtr_sales_daily_return_rate
+  sorts:
+  - descending: true
+    fieldId: mtr_sales_daily_net_revenue
+  tableCalculations: []
+  timezone: project_timezone
+name: Store performance
+slug: exec-store-performance
+spaceSlug: gulf-retail
+tableConfig:
+  columnOrder:
+  - dim_store_store_name_en
+  - dim_store_country_name
+  - dim_store_store_format
+  - mtr_sales_daily_net_revenue
+  - mtr_sales_daily_gross_margin_pct
+  - mtr_sales_daily_transactions
+  - mtr_sales_daily_average_basket_value
+  - mtr_sales_daily_return_rate
+tableName: mtr_sales_daily
+verification: null
+version: 1

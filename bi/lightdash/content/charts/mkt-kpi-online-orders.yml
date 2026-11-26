@@ -1,0 +1,48 @@
+chartConfig:
+  config:
+    comparisonFormat: percentage
+    flipColors: false
+    label: Online orders
+    selectedField: mtr_online_orders_daily_online_orders
+    showComparison: true
+  type: big_number
+contentType: chart
+description: Last completed month, change vs the month before.
+metricQuery:
+  additionalMetrics: []
+  customDimensions: []
+  dimensions:
+  - mtr_online_orders_daily_metric_date_month
+  exploreName: mtr_online_orders_daily
+  filters:
+    dimensions:
+      and:
+      - id: 2508d2e7-e20d-5669-b418-a0272a9d5a45
+        operator: inThePast
+        settings:
+          completed: true
+          unitOfTime: months
+        target:
+          fieldId: mtr_online_orders_daily_metric_date
+        values:
+        - 2
+      id: fe85e52d-7218-58c4-bf41-4a8e1fa9e77e
+  limit: 2
+  metricOverrides: {}
+  metrics:
+  - mtr_online_orders_daily_online_orders
+  sorts:
+  - descending: true
+    fieldId: mtr_online_orders_daily_metric_date_month
+  tableCalculations: []
+  timezone: project_timezone
+name: Online orders
+slug: mkt-kpi-online-orders
+spaceSlug: gulf-retail
+tableConfig:
+  columnOrder:
+  - mtr_online_orders_daily_metric_date_month
+  - mtr_online_orders_daily_online_orders
+tableName: mtr_online_orders_daily
+verification: null
+version: 1
