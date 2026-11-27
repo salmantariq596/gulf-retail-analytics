@@ -38,7 +38,7 @@ Marketing CSV ──┘          DuckDB (dev) · Snowflake (prod) · orchestrate
 - [x] **Phase 2** — dbt setup, sources, seeds, staging, SQLFluff *(17 staging models, 8 seeds, 137 tests, 13 freshness checks)*
 - [x] **Phase 3** — Snapshots, intermediate models, dimensions with contracts *(2 snapshots, 8 intermediate models, 7 contracted dimensions)*
 - [x] **Phase 4** — Fact tables, incremental models, 100+ tests *(5 facts + 1 report, 275 data tests + 4 unit tests)*
-- [ ] **Phase 5** — Snowflake: RBAC, warehouses, prod build *(RBAC, key-pair service users and PROD build done; full 3-year load pending)*
+- [x] **Phase 5** — Snowflake: RBAC, warehouses, prod build *(3 years, ~115M raw rows loaded in 71 min; full prod build 5.5 min ≈ 0.2 credits; daily run ≈ 0.17 credits. See [docs/cost.md](docs/cost.md))*
 - [ ] **Phase 6** — MetricFlow metrics, Lightdash dashboards, Dagster *(25 metrics, 4 generated metric tables, 3 dashboards as code, exposures, Dagster daily job)*
 - [ ] **Phase 7** — CI/CD, docs site, launch *(PR checks, slim CI, deploy + docs site; launch pending)*
 
@@ -143,7 +143,7 @@ A pre-commit hook fails if the generated files drift from the MetricFlow definit
 DuckDB allows a single writer: don't run `najm-ingest` and `dbt` at the same time. See [CONTRIBUTING.md](CONTRIBUTING.md) for layer and naming conventions.
 
 Without Docker, the API also runs locally: `uvicorn mock_api.main:app --app-dir generator --port 8000`.
-The full 3-year dataset (`--profile full`, ~20M POS lines) is generated for Snowflake in Phase 5.
+The full 3-year dataset (`--profile full`: 14M sales, 23.8M POS lines, 41M stock rows) is generated and loaded into Snowflake by [snowflake/full_load.ps1](snowflake/full_load.ps1).
 
 | Generated (dev profile, 92 days) | Rows |
 |---|---|

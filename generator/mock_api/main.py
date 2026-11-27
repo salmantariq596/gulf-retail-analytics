@@ -63,9 +63,13 @@ def _page(table: str, pk: str, updated_since: str | None, page: int, page_size: 
         if cursor:
             c_ts, _, c_pk = cursor.partition("|")
             pk_val = int(c_pk) if table == "order_events" else c_pk
+            # Seek the index from the cursor, not from updated_since: SQLite does not use the
+            # row-value comparison as an index bound, so without this every page re-scans all
+            # earlier rows (quadratic; a 10M-row first load timed out on deep pages).
             rows = conn.execute(
                 f"SELECT * FROM {table} WHERE updated_at >= ? AND (updated_at, {pk}) > (?, ?) "
-                f"ORDER BY updated_at, {pk} LIMIT ?", (since, c_ts, pk_val, page_size + 1)).fetchall()
+                f"ORDER BY updated_at, {pk} LIMIT ?",
+                (max(since, c_ts), c_ts, pk_val, page_size + 1)).fetchall()
         else:
             rows = conn.execute(
                 f"SELECT * FROM {table} WHERE updated_at >= ? ORDER BY updated_at, {pk} LIMIT ? OFFSET ?",
