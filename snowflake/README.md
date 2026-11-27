@@ -48,6 +48,6 @@ The trial gives 30 days or $400 of credits, whichever ends first. Everything bel
 
 ## Tuning checklist
 
-- [ ] Query profile of a typical dashboard query on `fct_sales_lines`: if partitions scanned ≈ total, keep `cluster_by=['business_date']` and compare before and after
-- [ ] Credits for the full build and for one incremental day → [`docs/cost.md`](../docs/cost.md)
-- [ ] First incremental run after the full build: confirm only the 3-day window is rewritten (query history)
+- [x] Query profile of a typical dashboard query on `fct_sales_lines`: clustered on `business_date`, a one-month query scans 3 of 68 partitions vs 85 of 85 unclustered → [`docs/cost.md`](../docs/cost.md#clustering-fct_sales_lines)
+- [x] Credits for the full build and for one incremental day → [`docs/cost.md`](../docs/cost.md)
+- [x] First incremental run after the full build: only the 3-day window is rewritten (164k of 23.9M sales lines). `fct_inventory_daily` still computes its full upstream window, which is a known tuning opportunity (see cost.md)
