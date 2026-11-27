@@ -47,6 +47,10 @@ create warehouse if not exists bi_wh
     warehouse_size = xsmall auto_suspend = 60 auto_resume = true initially_suspended = true
     comment = 'Lightdash dashboards and ad-hoc analysis';
 
+-- New accounts come with COMPUTE_WH (5-minute auto-suspend), which worksheets and admin
+-- sessions use by default: hold it to the same 60s guardrail.
+alter warehouse if exists compute_wh set auto_suspend = 60;
+
 -- -----------------------------------------------------------------------------
 -- 3. Databases
 -- -----------------------------------------------------------------------------
